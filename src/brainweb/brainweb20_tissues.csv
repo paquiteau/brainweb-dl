@@ -1,0 +1,13 @@
+Tissue Type,ID,Label,T1 (ms),T1 Std (ms),T2 (ms),T2 Std (ms),T2* (ms),T2* Std (ms)
+Background,bck,0,0,0,0,0,0,0
+CSF,csf,1,3000,500,2500,500,70,30
+Gray Matter,gry,2,1050,150,85,15,35,5
+White Matter,wht,3,700,200,85,15,35,5
+Fat,fat,4,250,50,85,15,35,5
+Muscle,mus,5,1050,50,50,10,25,5
+Muscle/Skin,skn,6,1050,50,50,10,25,5
+Skull,skl,7,350,100,15,5,7.5,2.5
+Vessels,ves,8,1750,250,200,25,20,5
+Around Fat,fat2,9,250,50,85,15,35,5
+Dura Matter,dura,10,700,100,150,50,50,10
+Bone Marrow,mrw,11,225,75,50,10,25,5

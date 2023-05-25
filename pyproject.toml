@@ -1,0 +1,93 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools", "setuptools_scm[toml]", "wheel"]
+
+
+[project]
+name = "brainweb-dl"
+description = "Download BrainWeb MRI data"
+readme = "README.md"
+
+requires-python = ">=3.10"
+dynamic = ["version"]
+
+license = {file = "LICENSE.txt"}
+keywords = ["brainweb", "mri", "download", "data"]
+
+
+authors = [
+  {name = "Pierre-Antoine Comby", email = "pierre-antoine.comby@cea.fr" } # Optional
+]
+
+# Classifiers help users find your project by categorizing it.
+# For a list of valid classifiers, see https://pypi.org/classifiers/
+classifiers = [  # Optional
+  # How mature is this project? Common values are
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
+  "Development Status :: 3 - Alpha",
+
+  # Indicate who your project is intended for
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+
+  # Specify the Python versions you support here. In particular, ensure
+  # that you indicate you support Python 3. These classifiers are *not*
+  # checked by "pip install". See instead "python_requires" below.
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+"requests",
+"tqdm",
+"numpy",
+"nibabel",
+]
+
+
+[project.optional-dependencies] # Optional
+dev = ["black", "isort"]
+test = ["pytest", "pytest-black", "pytest-cov", "pytest-sugar", "pytest-xdist"]
+doc = ["sphinx", "pydata-sphinx-theme", "sphinx-gallery", "matplotlib"]
+# List URLs that are relevant to your project
+# This field corresponds to the "Project-URL" and "Home-Page" metadata fields:
+[project.urls]  # Optional
+"Homepage" = "https://github.com/paquiteau/brainweb-dl"
+"Bug Reports" = "https://github.com/paquiteau/brainweb-dl/issues"
+"Source" = "https://github.com/paquiteau/brainweb-dl"
+
+[project.scripts]  # Optional
+# "my-script = my_package.some_module:main"
+#
+
+# Formatting using black.
+[tool.black]
+
+[tool.isort]
+profile="black"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--cov=simfmri",
+    "--cov-report=term-missing",
+    "--cov-report=xml"
+]
+
+
+[tool.ruff]
+src = ["src", "tests"]
+select = ["E", "F", "B", "Q", "D", "UP", "ANN"]
+
+ignore = [
+    "ANN101", # missing type annotation for self
+    "ANN102", # missing type annotation for cls in classmethod.
+    "ANN204", # missing return type for __init__
+    "D105", # missing docstring in magic method
+    "D404", # Imperative mode is not necessary everywhere, trust me.
+]
+[tool.ruff.pydocstyle]
+convention = "numpy"
