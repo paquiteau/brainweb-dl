@@ -60,6 +60,6 @@ $ pip install -e .[dev,test,doc]
 
 ## Acknowledgement
 
- - https://github.com/casperdcl/brainweb/ for the preliminary work and the original idea. Check out his work for 
+ - https://github.com/casperdcl/brainweb/ for the preliminary work and the original idea. Check out his work if you are looking for PET imaging, and registration functionalities.
 
  - https://brainweb.bic.mni.mcgill.ca/ for providing the dataset to the community.
