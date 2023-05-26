@@ -4,42 +4,59 @@ A collection of python scripts to download and convert the Brainweb dataset.
 
 ## Features
 
-- Automatic download, caching and formatting of the brainweb dataset 
-  - Conversion to the Nifti format
+- Automatic download, caching and formatting of the brainweb dataset, with conversion to nifti format
  
-- Download all the brainweb data and format it as a BIDS dataset. 
 
 - Generate T1, T2, T2* and PD images from the brainweb dataset
   - NB: The values provided are not true values, but are suppose to be  close enough to be used for testing purposes.
+    
+## Usage
 
+### Location of the data
+
+The directory for the cached data is by order of priority:
+- A user specific argument (`brainweb_dir` in most functions)
+- The `BRAINWEB_DIR` environment variable
+- The `~/.cache/brainweb` folder
+
+### In a Python Script
+    ```python
+    from brainweb_dl import get_mri 
+   
+   data = get_mri(subject=44, contrast="T1")
+    ```
+
+The brainweb dataset is downloaded and cached in the `~/.cache/brainweb` folder by default.
+
+### Using the command line interface
+
+``` bash
+$ brainweb-dl 44 --contrast=T1
+```
+
+see `brainweb-dl --help` for more information.
 
 ## Installation 
     
     ```bash 
     pip install brainweb-dl
     ```
-## Usage
-### In a Python Script
-
-    `
-    ```python
-    from brainwebdl import 
-   
-    ```
-
-The brainweb dataset is downloaded and cached in the `~/.cache/brainweb` folder by default.
-
-### Using the Command line 
+### Development
 
 ``` bash
-brainweb-dl --help
+$ git clone git@github.com/paquiteau/brainweb-dl 
+$ cd brainweb-dl
+$ pip install -e .[dev,test,doc]
 ```
 
+
+
 ### TODO 
-- [ ] add interface to download as BIDS
-- [ ] add interface to generate T1, T2, T2* and PD images
+- [ ] Add unit test.
 - [ ] fuzzy / Multiple subjects download in parallel ? 
-- [ ] find Location of brainweb dataset (User > Env variable > default location)
+- [ ] add interface to download as BIDS
+- [x] add interface to generate T1, T2, T2* and PD images
+- [x] find Location of brainweb dataset (User > Env variable > default location)
 
 ## Acknowledgement
 
