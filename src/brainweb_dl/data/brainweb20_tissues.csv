@@ -5,7 +5,7 @@ Gray Matter,gry,2,1050,150,85,15,35,5
 White Matter,wht,3,700,200,85,15,30,5
 Fat,fat,4,250,50,85,15,30,5
 Muscle,mus,5,1050,50,50,10,25,5
-Muscle/Skin,skn,6,1050,50,50,10,25,5
+Muscle/Skin,m-s,6,1050,50,50,10,25,5
 Skull,skl,7,350,100,15,5,7.5,2.5
 Vessels,ves,8,1750,250,200,25,20,5
 Around Fat,fat2,9,250,50,85,15,35,5
