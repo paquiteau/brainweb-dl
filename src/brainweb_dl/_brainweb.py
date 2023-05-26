@@ -55,6 +55,7 @@ AFFINE = np.array(
     ]
 )
 
+AFFINE = np.eye(4)
 
 def download_brainweb20_multiple(
     subject: int | list | Literal["all"],
@@ -82,12 +83,12 @@ def download_brainweb20_multiple(
     if subject == "all":
         subject = SUB_ID
     elif isinstance(subject, int):
-        subject = SUB_ID[subject]
+        subject = [SUB_ID[subject]]
     elif not isinstance(subject, list):
         subject = [SUB_ID[s] for s in subject]
         raise ValueError("subject must be int, list or 'all'")
     f = []
-    for s in tqdm.tqdm(subject):
+    for s in tqdm(subject):
         filename = download_brainweb20(s, dir, force, segmentation)
         f.append(filename)
     return f
@@ -118,7 +119,7 @@ def download_brainweb20(
         Path to downloaded file.
     """
     dir = Path(dir)
-    path = dir / f"brainweb_s{s:02d}_{segmentation}.nii"
+    path = dir / f"brainweb_s{s:02d}_{segmentation}.nii.gz"
     if path.exists() and not force:
         return path
 
@@ -127,7 +128,7 @@ def download_brainweb20(
         _request_get_brainweb(download_command, path, shape=BIG_RES, dtype=np.uint16)
     elif segmentation == "fuzzy":
         # Download all the fuzzy segmentation and create a 4D volume.
-        path = Path(dir) / f"brainweb_s{s:02d}_fuzzy.nii"
+        path = Path(dir) / f"brainweb_s{s:02d}_fuzzy.nii.gz"
         # The case of fuzzy segmentation is a bit special.
         # We download all the fuzzy segmentation and create a 4D volume.
         # The 4th dimension is the segmentation type.
@@ -143,7 +144,7 @@ def download_brainweb20(
             name = f"subject{s:02d}_{row['ID']}"
             data[..., i] = _request_get_brainweb(
                 name,
-                dir / f"{name}.nii",
+                dir / f"{name}.nii.gz",
                 dtype=np.uint16,
                 shape=BIG_RES,
                 obj_mode=True,
@@ -203,7 +204,7 @@ def download_brainweb1(
         # The case of fuzzy segmentation is a bit special.
         # We download all the fuzzy segmentation and create a 4D volume.
         # The 4th dimension is the segmentation type.
-        fname = f"phantom_{res:.1f}mm_normal_fuzzy.nii"
+        fname = f"phantom_{res:.1f}mm_normal_fuzzy.nii.gz"
         path = dir / fname
         if path.exists() and not force:
             return path
@@ -219,7 +220,7 @@ def download_brainweb1(
             name = f"phantom_{res:.1f}mm_normal_{row['ID']}"
             data[..., i] = _request_get_brainweb(
                 name,
-                path=dir / f"{name}.nii",
+                path=dir / f"{name}.nii.gz",
                 dtype=np.uint16,
                 shape=STD_RES,
                 obj_mode=True,
@@ -233,7 +234,7 @@ def download_brainweb1(
     elif type in ["T1", "T2", "PD"]:
         # download of contrasted images
         download_command = f"{type}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
-        fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.nii"
+        fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.nii.gz"
     else:
         raise ValueError("type must be in {'T1', 'T2', 'PD', 'crisp', 'fuzzy'}")
     return _request_get_brainweb(
@@ -328,7 +329,7 @@ def _request_get_brainweb(
 
 def _load_tissue_map(brainweb_set: Literal[1, 20]) -> list[dict]:
     with open(
-        files(".").joinpath(
+        files("brainweb_dl").joinpath(
             BRAINWEB_VALUES[brainweb_set]
         )
     ) as csvfile:
