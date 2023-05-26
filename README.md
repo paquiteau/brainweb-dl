@@ -20,11 +20,11 @@ The directory for the cached data is by order of priority:
 - The `~/.cache/brainweb` folder
 
 ### In a Python Script
-    ```python
-    from brainweb_dl import get_mri 
-   
-   data = get_mri(subject=44, contrast="T1")
-    ```
+```python
+from brainweb_dl import get_mri 
+
+data = get_mri(subject=44, contrast="T1")
+```
 
 The brainweb dataset is downloaded and cached in the `~/.cache/brainweb` folder by default.
 
@@ -38,9 +38,9 @@ see `brainweb-dl --help` for more information.
 
 ## Installation 
     
-    ```bash 
-    pip install brainweb-dl
-    ```
+```bash 
+$ pip install brainweb-dl
+```
 ### Development
 
 ``` bash
@@ -60,6 +60,6 @@ $ pip install -e .[dev,test,doc]
 
 ## Acknowledgement
 
- - https://github.com/casperdcl/brainweb/ for the preliminary work and the original idea. Check out his work for 
+ - https://github.com/casperdcl/brainweb/ for the preliminary work and the original idea. Check out his work if you are looking for PET imaging, and registration functionalities.
 
  - https://brainweb.bic.mni.mcgill.ca/ for providing the dataset to the community.
