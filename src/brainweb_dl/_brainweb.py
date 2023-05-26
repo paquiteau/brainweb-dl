@@ -355,6 +355,8 @@ def _request_get_brainweb(
                     buffer.write(chunk)
                     pbar.update(len(chunk))
         data = np.frombuffer(gzip.decompress(buffer.getvalue()), dtype=dtype)
+    if data.size != np.prod(shape):
+        raise ValueError(f"Error downloading {download_command}")
     data = data.reshape(shape)
     if obj_mode:
         return data
