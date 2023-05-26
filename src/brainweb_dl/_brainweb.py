@@ -29,6 +29,7 @@ import io
 from pathlib import Path
 from typing import Literal
 
+from joblib import Parallel, delayed
 import nibabel as nib
 import numpy as np
 import requests
@@ -110,11 +111,12 @@ def get_brainweb20_multiple(
     elif not isinstance(subject, list):
         subject = [SUB_ID[s] for s in subject]
         raise ValueError("subject must be int, list or 'all'")
-    f = []
-    for s in tqdm(subject, desc="Downloading all Subjects", position=0, leave=True):
-        filename = get_brainweb20(s, brainweb_dir, force, segmentation)
-        f.append(filename)
-    return f
+    if len(subject) > 1:
+        return Parallel(n_jobs=-1, backend="threading")(
+            delayed(get_brainweb20)(s, brainweb_dir, force, segmentation)
+            for s in subject
+        )
+    return get_brainweb20(subject[0], brainweb_dir, force, segmentation)
 
 
 def get_brainweb20(
@@ -162,20 +164,22 @@ def get_brainweb20(
             return path
         tissue_map = _load_tissue_map(20)
         data = np.zeros((*BIG_RES, len(tissue_map)))
-        for i, row in tqdm(
-            enumerate(tissue_map),
-            desc="Downloading fuzzy segmentation",
-            position=0,
-            leave=False,
-        ):
-            name = f"subject{s:02d}_{row['ID']}"
+
+        # For faster download, let's use joblib.
+        def _download_fuzzy(i: int, tissue: str, data: np.ndarray) -> None:
+            name = f"subject{s:02d}_{tissue}"
             data[..., i] = _request_get_brainweb(
                 name,
-                brainweb_dir / f"{name}.{extension}",  # placeolder
+                brainweb_dir / f"{name}",  # placeholder value
                 dtype=np.uint16,
                 shape=BIG_RES,
                 obj_mode=True,
             )
+
+        Parallel(n_jobs=-1, backend="threading")(
+            delayed(_download_fuzzy)(i, tissue["ID"], data)
+            for i, tissue in enumerate(tissue_map)
+        )
         return save_array(data, path)
 
     else:

@@ -48,6 +48,7 @@ dependencies = [
 "tqdm",
 "numpy",
 "nibabel",
+"joblib",
 "importlib_resources ; python_version<'3.9'",
 ]
 
