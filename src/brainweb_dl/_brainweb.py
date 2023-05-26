@@ -19,6 +19,7 @@ import csv
 import logging
 import os
 import sys
+import functools
 
 if sys.version_info >= (3, 9):
     from importlib.resources import files
@@ -364,6 +365,7 @@ def _request_get_brainweb(
     return save_array(data, path)
 
 
+@functools.lru_cache(maxsize=3)
 def _load_tissue_map(brainweb_set: Literal[1, 20]) -> list[dict]:
     with open(
         files("brainweb_dl.data").joinpath(BRAINWEB_VALUES[brainweb_set])
