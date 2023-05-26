@@ -52,20 +52,37 @@ BASE_URL = "http://brainweb.bic.mni.mcgill.ca/cgi/brainweb1/"
 BIG_RES = (362, 434, 362)
 STD_RES = (181, 217, 181)
 
-AFFINE = np.array(
-    [
-        [0, 0, 1, 0],
-        [0, 1, 0, 0],
-        [1, 0, 0, 0],
-        [0, 0, 0, 1],
-    ]
-)
 
-AFFINE = np.eye(4)
+def get_brainweb_dir(brainweb_dir: os.PathLike = None) -> os.PathLike:
+    """Get the Brainweb directory.
 
-def download_brainweb20_multiple(
+    Parameters
+    ----------
+    brainweb_dir : os.PathLike
+       brainweb_directory to download the data.
+
+    Returns
+    -------
+    os.PathLike
+        Path to brainweb_dir
+
+    Notes
+    -----
+    The brainweb is set in the following order:
+    - Thebrainweb_directory passed as argument.
+    - The environment variable BRAINWEB_DIR.
+    - The defaultbrainweb_directory ~/.cache/brainweb.
+    """
+    if brainweb_dir is None:
+        brainweb_dir = os.environ.get("BRAINWEB_DIR", None)
+    if brainweb_dir is None:
+        brainweb_dir = Path.home() / ".cache" / "brainweb"
+    return Path(brainweb_dir)
+
+
+def get_brainweb20_multiple(
     subject: int | list | Literal["all"],
-    dir: os.PathLike = ".brainweb",
+    brainweb_dir: os.PathLike = None,
     force: bool = False,
     segmentation: Literal["crisp", "fuzzy"] = "crisp",
 ) -> list[os.PathLike]:
@@ -76,8 +93,8 @@ def download_brainweb20_multiple(
     subject : int | list | Literal["all"]
         subject id or list of subject id to download.
         If "all", download all subjects.
-    dir : os.PathLike
-        directory to download the data.
+    brainweb_dir : os.PathLike
+       brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
 
@@ -95,16 +112,17 @@ def download_brainweb20_multiple(
         raise ValueError("subject must be int, list or 'all'")
     f = []
     for s in tqdm(subject):
-        filename = download_brainweb20(s, dir, force, segmentation)
+        filename = get_brainweb20(s, brainweb_dir, force, segmentation)
         f.append(filename)
     return f
 
 
-def download_brainweb20(
+def get_brainweb20(
     s: int,
-    dir: os.PathLike,
+    brainweb_dir: os.PathLike = None,
     force: bool = False,
     segmentation: Literal["crisp", "fuzzy"] = "crisp",
+    extension: Literal["nii.gz", "nii"] = "nii.gz",
 ) -> os.PathLike:
     """Download one subject of brainweb dataset.
 
@@ -112,20 +130,22 @@ def download_brainweb20(
     ----------
     s : int
         subject id.
-    dir : os.PathLike
-        directory to download the data.
+    brainweb_dir : os.PathLike
+       brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
     segmentation: "crisp" | "fuzzy"
         segmentation type.
+    extension: "nii.gz" | "nii"
+        extension of the downloaded file.
 
     Returns
     -------
     os.PathLike
         Path to downloaded file.
     """
-    dir = Path(dir)
-    path = dir / f"brainweb_s{s:02d}_{segmentation}.nii.gz"
+    brainweb_dir = get_brainweb_dir(brainweb_dir)
+    path = brainweb_dir / f"brainweb_s{s:02d}_{segmentation}.{extension}"
     if path.exists() and not force:
         return path
 
@@ -134,7 +154,7 @@ def download_brainweb20(
         _request_get_brainweb(download_command, path, shape=BIG_RES, dtype=np.uint16)
     elif segmentation == "fuzzy":
         # Download all the fuzzy segmentation and create a 4D volume.
-        path = Path(dir) / f"brainweb_s{s:02d}_fuzzy.nii.gz"
+        path = Path(brainweb_dir) / f"brainweb_s{s:02d}_fuzzy.{extension}"
         # The case of fuzzy segmentation is a bit special.
         # We download all the fuzzy segmentation and create a 4D volume.
         # The 4th dimension is the segmentation type.
@@ -150,31 +170,33 @@ def download_brainweb20(
             name = f"subject{s:02d}_{row['ID']}"
             data[..., i] = _request_get_brainweb(
                 name,
-                dir / f"{name}.nii.gz",
+                brainweb_dir / f"{name}.{extension}",  # placeolder
                 dtype=np.uint16,
                 shape=BIG_RES,
                 obj_mode=True,
             )
-        nib.save(nib.Nifti1Image(data, affine=AFFINE), path)
-        return path
+        return save_array(data, path)
 
     else:
         raise ValueError("segmentation must be 'crisp' or 'fuzzy'")
     return path
 
 
-def download_brainweb1(
+def get_brainweb1(
     type: Literal["T1", "T2", "PD", "crisp", "fuzzy"] = "T2",
     res: int = 1,
     noise: int = 0,
     field_value: int = 0,
-    dir: os.PathLike = ".brainweb",
+    brainweb_dir: os.PathLike = ".brainweb",
     force: bool = False,
+    extension: Literal["nii.gz", "nii"] = "nii.gz",
 ) -> os.PathLike | np.ndarray:
     """Download the Brainweb1 phantom as a nifti file.
 
     Parameters
     ----------
+    type : "T1" | "T2" | "PD" | "crisp" | "fuzzy"
+        Type of the phantom to download.
     res : int
         Resolution of the phantom. Must be in {1, 3, 5, 7}
     noise : int
@@ -182,10 +204,12 @@ def download_brainweb1(
         {0, 1, 3, 5, 7, 9}
     field_value : int
         RF field value in the phantom. Must be in {0, 20, 40}
-    dir : os.PathLike
-        directory to download the data.
+    brainweb_dir : os.PathLike
+       brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
+    extension: "nii.gz" | "nii"
+        extension of the downloaded file.
 
     Returns
     -------
@@ -197,7 +221,7 @@ def download_brainweb1(
     This is a simple interface to the form available at:
     https://brainweb.bic.mni.mcgill.ca/brainweb/selection_normal.html
     """
-    dir = Path(dir)
+    brainweb_dir = get_brainweb_dir(brainweb_dir)
 
     if res not in ALLOWED_RES:
         raise ValueError(f"Resolution must be in {ALLOWED_RES}")
@@ -210,8 +234,8 @@ def download_brainweb1(
         # The case of fuzzy segmentation is a bit special.
         # We download all the fuzzy segmentation and create a 4D volume.
         # The 4th dimension is the segmentation type.
-        fname = f"phantom_{res:.1f}mm_normal_fuzzy.nii.gz"
-        path = dir / fname
+        fname = f"phantom_{res:.1f}mm_normal_fuzzy.{extension}"
+        path = brainweb_dir / fname
         if path.exists() and not force:
             return path
         tissue_map = _load_tissue_map(1)
@@ -226,25 +250,25 @@ def download_brainweb1(
             name = f"phantom_{res:.1f}mm_normal_{row['ID']}"
             data[..., i] = _request_get_brainweb(
                 name,
-                path=dir / f"{name}.nii.gz",
+                path=brainweb_dir / f"{name}.{extension}",  # placeholder
                 dtype=np.uint16,
                 shape=STD_RES,
                 obj_mode=True,
             )
         # Create the 4D volume.
-        nib.save(nib.Nifti1Image(data, affine=AFFINE), path)
+        nib.save(nib.Nifti1Image(data, affine=np.eye(4)), path)
         return path
     elif type == "crisp":
         download_command = f"phantom_{res:.1f}mm_normal_crisp"
-        fname = f"phantom_{res:.1f}mm_normal_crisp.nii"
+        fname = f"phantom_{res:.1f}mm_normal_crisp.{extension}"
     elif type in ["T1", "T2", "PD"]:
         # download of contrasted images
         download_command = f"{type}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
-        fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.nii.gz"
+        fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
     else:
         raise ValueError("type must be in {'T1', 'T2', 'PD', 'crisp', 'fuzzy'}")
     return _request_get_brainweb(
-        download_command, dir / fname, force, shape=STD_SHAPE, dtype=np.uint16
+        download_command, brainweb_dir / fname, force, shape=STD_RES, dtype=np.uint16
     )
 
 
@@ -329,14 +353,19 @@ def _request_get_brainweb(
     if obj_mode:
         return data
 
-    nib.save(nib.Nifti1Image(data, AFFINE), path)
-    return path
+    return save_array(data, path)
 
 
 def _load_tissue_map(brainweb_set: Literal[1, 20]) -> list[dict]:
     with open(
-        files("brainweb_dl").joinpath(
-            BRAINWEB_VALUES[brainweb_set]
-        )
+        files("brainweb_dl.data").joinpath(BRAINWEB_VALUES[brainweb_set])
     ) as csvfile:
         return list(csv.DictReader(csvfile))
+
+
+def save_array(data: np.ndarray, path: os.PathLike) -> os.PathLike:
+    if path.suffix == ".npy":
+        np.save(path, data)
+    else:
+        nib.save(nib.Nifti1Image(data, np.eye(4)), path)
+    return path
