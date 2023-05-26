@@ -113,10 +113,10 @@ def get_brainweb20_multiple(
         subject = [SUB_ID[s] for s in subject]
         raise ValueError("subject must be int, list or 'all'")
     if len(subject) > 1:
-        return Parallel(n_jobs=-1, backend="threading")(
-            delayed(get_brainweb20)(s, brainweb_dir, force, segmentation)
-            for s in subject
-        )
+        f = []
+        for s in tqdm(subject, desc="Downloading brainweb20"):
+            f.append(get_brainweb20(s, brainweb_dir, force, segmentation))
+        return f
     return get_brainweb20(subject[0], brainweb_dir, force, segmentation)
 
 
