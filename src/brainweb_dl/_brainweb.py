@@ -9,24 +9,25 @@ There is two datasets available:
    -
 There is a single Anatomical T1, T2 and PD volume. The volumes are 181x217x181
 at 1mm isotropic resolution.
+
 References
 ----------
 - Brainweb: https://brainweb.bic.mni.mcgill.ca/brainweb/
 - Original Python interface: https://github.com/casperdcl/brainweb/blob/master/brainweb/utils.py
 """
+import csv
 import logging
 import os
-import csv
 import sys
 
 if sys.version_info >= (3, 9):
     from importlib.resources import files
 else:
     from importlib_resources import files
+import gzip
+import io
 from pathlib import Path
 from typing import Literal
-import io
-import gzip
 
 import nibabel as nib
 import numpy as np
