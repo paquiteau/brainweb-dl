@@ -164,7 +164,7 @@ def get_brainweb20(
         if path.exists() and not force:
             return path
         tissue_map = _load_tissue_map(20)
-        data = np.zeros((*BIG_RES, len(tissue_map)))
+        data = np.zeros((*BIG_RES, len(tissue_map)), dtype=np.uint16)
 
         # For faster download, let's use joblib.
         def _download_fuzzy(i: int, tissue: str, data: np.ndarray) -> None:
