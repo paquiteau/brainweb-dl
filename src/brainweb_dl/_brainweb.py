@@ -308,7 +308,7 @@ def _request_get_brainweb(
     Exception
         If the download fails.
     """
-    if path.exists() and not force:
+    if not obj_mode and path.exists() and not force:
         return path
     d = requests.get(
         BASE_URL
@@ -332,8 +332,9 @@ def _request_get_brainweb(
         headers={"Accept-Encoding": None, "Content-Encoding": "gzip"},
     )
 
-    path = Path(path)
-    path.parent.mkdir(exist_ok=True, parents=True)
+    if not obj_mode:
+        path = Path(path)
+        path.parent.mkdir(exist_ok=True, parents=True)
     # download
     with io.BytesIO() as buffer:
         with tqdm(
