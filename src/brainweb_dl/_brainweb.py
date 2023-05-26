@@ -111,7 +111,7 @@ def get_brainweb20_multiple(
         subject = [SUB_ID[s] for s in subject]
         raise ValueError("subject must be int, list or 'all'")
     f = []
-    for s in tqdm(subject):
+    for s in tqdm(subject, desc="Downloading all Subjects", position=0, leave=True):
         filename = get_brainweb20(s, brainweb_dir, force, segmentation)
         f.append(filename)
     return f
@@ -166,6 +166,7 @@ def get_brainweb20(
             enumerate(tissue_map),
             desc="Downloading fuzzy segmentation",
             position=0,
+            leave=False,
         ):
             name = f"subject{s:02d}_{row['ID']}"
             data[..., i] = _request_get_brainweb(
@@ -341,8 +342,8 @@ def _request_get_brainweb(
             unit="B",
             unit_scale=True,
             unit_divisor=1024,
-            leave=True,
-            position=1,
+            leave=False,
+            position=2,
         ) as pbar:
             for chunk in d.iter_content(chunk_size=1024):
                 if chunk:
