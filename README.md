@@ -38,9 +38,9 @@ see `brainweb-dl --help` for more information.
 
 ## Installation 
     
-    ```bash 
-    pip install brainweb-dl
-    ```
+```bash 
+$ pip install brainweb-dl
+```
 ### Development
 
 ``` bash
