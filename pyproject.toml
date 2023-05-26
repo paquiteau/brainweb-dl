@@ -65,7 +65,7 @@ doc = ["sphinx", "pydata-sphinx-theme", "sphinx-gallery", "matplotlib"]
 
 [project.scripts]  # Optional
 # "my-script = my_package.some_module:main"
-#
+brainweb-dl = "brainweb_dl.cli:main"
 
 # Formatting using black.
 [tool.black]
