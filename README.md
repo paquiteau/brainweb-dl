@@ -20,11 +20,11 @@ The directory for the cached data is by order of priority:
 - The `~/.cache/brainweb` folder
 
 ### In a Python Script
-    ```python
-    from brainweb_dl import get_mri 
-   
-   data = get_mri(subject=44, contrast="T1")
-    ```
+```python
+from brainweb_dl import get_mri 
+
+data = get_mri(subject=44, contrast="T1")
+```
 
 The brainweb dataset is downloaded and cached in the `~/.cache/brainweb` folder by default.
 
