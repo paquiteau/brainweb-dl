@@ -17,7 +17,12 @@ def parse_args() -> argparse.Namespace:
         epilog="For more information, visit https://github.com/paquiteau/brainweb-dl",
     )
     parser.add_argument(
-        "subject", type=int, help="Subject ID", nargs="*", choices=[0, *SUB_ID]
+        "subject",
+        type=int,
+        help="Subject ID",
+        nargs="*",
+        choices=[-1, 0, *SUB_ID],
+        default=-1,
     )
     parser.add_argument(
         "--contrast",
@@ -39,8 +44,14 @@ def parse_args() -> argparse.Namespace:
         default="nii.gz",
     )
     parser.add_argument("--rng", type=int, help="Random seed", default=None)
+    parser.add_argument("--all", action="store_true", help="Download all subjects")
 
-    return parser.parse_args()
+    ns = parser.parse_args()
+    if ns.all and ns.subject == -1:
+        ns.subject = [*SUB_ID]
+    elif ns.subject == -1:
+        raise ValueError("Subject ID or --all is required")
+    return ns
 
 
 def main() -> None:
