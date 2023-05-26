@@ -5,7 +5,7 @@ from typing import Literal
 
 import nibabel as nib
 import numpy as np
-from _brainweb import _load_tissue_map, get_brainweb1, get_brainweb20
+from ._brainweb import _load_tissue_map, get_brainweb1, get_brainweb20
 
 logger = logging.getLogger("brainweb_dl")
 
