@@ -11,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.6"
 dynamic = ["version"]
 
-license = {file = "LICENSE.txt"}
+license = {file = "LICENSE"}
 keywords = ["brainweb", "mri", "download", "data"]
 
 
