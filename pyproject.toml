@@ -8,7 +8,7 @@ name = "brainweb-dl"
 description = "Download BrainWeb MRI data"
 readme = "README.md"
 
-requires-python = ">=3.10"
+requires-python = ">=3.6"
 dynamic = ["version"]
 
 license = {file = "LICENSE.txt"}
@@ -35,6 +35,9 @@ classifiers = [  # Optional
   # Specify the Python versions you support here. In particular, ensure
   # that you indicate you support Python 3. These classifiers are *not*
   # checked by "pip install". See instead "python_requires" below.
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -45,6 +48,7 @@ dependencies = [
 "tqdm",
 "numpy",
 "nibabel",
+"importlib_resources ; python_version<'3.9'",
 ]
 
 
