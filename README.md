@@ -2,10 +2,12 @@
 
 Welcome to Brainweb-DL, a powerful Python toolkit for downloading and converting the Brainweb dataset. 
 
-[![GitHub license](https://img.shields.io/github/license/paquiteau/brainweb-dl)](https://github.com/paquiteau/brainweb-dl/blob/main/LICENSE)
+<p align="center">
+<img src=https://img.shields.io/github/license/paquiteau/brainweb-dl a=https://github.com/paquiteau/brainweb-dl/blob/main/LICENSE>
+<img src=https://www.codefactor.io/repository/github/paquiteau/brainweb-dl/badge a=https://www.codefactor.io/repository/github/paquiteau/brainweb-dl>
+<img src=https://img.shields.io/badge/style-black-black a=https://github.com/psf/black>
 
-[![Code Style](https://img.shields.io/badge/style-black-black)](https://github.com/psf/black)
-[![CodeFactor](https://www.codefactor.io/repository/github/paquiteau/brainweb-dl/badge)](https://www.codefactor.io/repository/github/paquiteau/brainweb-dl)
+</p>
 
 ## Features
 
@@ -74,3 +76,6 @@ We extend our gratitude to the following for their contributions:
 - [Casper De Clercq](https://github.com/casperdcl/brainweb/) for the preliminary work and original idea. Check out his great work if you are interested in PET imaging and registration functionalities.
 
 - [BrainWeb](https://brainweb.bic.mni.mcgill.ca/) for providing this valuable dataset to the community.
+
+
+<p align=center> :star2: If you like this work, don't forget to star it and share it 🌟 </p>
