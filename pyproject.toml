@@ -68,6 +68,16 @@ doc = ["sphinx", "pydata-sphinx-theme", "sphinx-gallery", "matplotlib"]
 # "my-script = my_package.some_module:main"
 brainweb-dl = "brainweb_dl.cli:main"
 
+[tool.setuptools.packages.find]
+where=["src"]
+
+
+[tool.setuptools_scm]
+write_to = "src/brainweb_dl/_version.py"
+version_scheme = "python-simplified-semver"
+local_scheme="no-local-version"
+
+
 # Formatting using black.
 [tool.black]
 
@@ -77,12 +87,12 @@ profile="black"
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = [
-    "--cov=simfmri",
+    "--cov=brainweb_dl",
     "--cov-report=term-missing",
     "--cov-report=xml"
 ]
 
-
+# linting using ruff.
 [tool.ruff]
 src = ["src", "tests"]
 select = ["E", "F", "B", "Q", "D", "UP", "ANN"]
