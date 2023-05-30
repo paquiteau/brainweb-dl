@@ -154,7 +154,11 @@ def get_brainweb20(
 
     if segmentation == "crisp":
         download_command = f"subject{s:02d}_{segmentation}"
-        _request_get_brainweb(download_command, path, shape=BIG_RES, dtype=np.uint16)
+        data = _request_get_brainweb(
+            download_command, path, shape=BIG_RES, dtype=np.uint16, obj_mode=True
+        )
+        data = data >> 4
+        data = data.astype(np.uint8)
     elif segmentation == "fuzzy":
         # Download all the fuzzy segmentation and create a 4D volume.
         path = Path(brainweb_dir) / f"brainweb_s{s:02d}_fuzzy.{extension}"
@@ -181,11 +185,9 @@ def get_brainweb20(
             delayed(_download_fuzzy)(i, tissue["ID"], data)
             for i, tissue in enumerate(tissue_map)
         )
-        return save_array(data, path)
-
     else:
         raise ValueError("segmentation must be 'crisp' or 'fuzzy'")
-    return path
+    return save_array(data, path)
 
 
 def get_brainweb1(
