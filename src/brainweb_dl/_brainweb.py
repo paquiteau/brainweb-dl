@@ -15,6 +15,7 @@ References
 - Brainweb: https://brainweb.bic.mni.mcgill.ca/brainweb/
 - Original Python interface: https://github.com/casperdcl/brainweb/blob/master/brainweb/utils.py
 """
+from __future__ import annotations
 import csv
 import logging
 import os

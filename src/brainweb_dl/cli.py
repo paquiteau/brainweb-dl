@@ -1,5 +1,5 @@
 """CLI function for the package."""
-
+from __future__ import annotations
 import argparse
 import logging
 
