@@ -90,12 +90,12 @@ def _apply_contrast(
     data = nib.load(file_fuzzy).get_fdata(dtype=np.float32)
 
     ret_data = np.zeros(data.shape[:-1], dtype=np.float32)
-    t2s = np.array([t[f"{contrast} (ms)"] for t in tissues])
-    t2s_std = np.array([t[f"{contrast} Std (ms)"] for t in tissues])
+    t2s = np.array([int(t[f"{contrast} (ms)"]) for t in tissues])
+    t2s_std = np.array([int(t[f"{contrast} Std (ms)"]) for t in tissues])
 
-    for tlabel in len(tissues[1:]):
+    for tlabel in range(1, len(tissues)):
         mask = data[..., tlabel] > 0
-        ret_data[mask] = data[..., tlabel] * rng.normal(
+        ret_data[mask] = data[mask, tlabel] * rng.normal(
             t2s[tlabel], t2s_std[tlabel], np.sum(mask)
         )
     return ret_data
