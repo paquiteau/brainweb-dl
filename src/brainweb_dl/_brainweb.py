@@ -80,6 +80,7 @@ def get_brainweb_dir(brainweb_dir: os.PathLike = None) -> os.PathLike:
         brainweb_dir = os.environ.get("BRAINWEB_DIR", None)
     if brainweb_dir is None:
         brainweb_dir = Path.home() / ".cache" / "brainweb"
+    os.makedirs(brainweb_dir, exist_ok=True)
     return Path(brainweb_dir)
 
 

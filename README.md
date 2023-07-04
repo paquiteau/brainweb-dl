@@ -3,10 +3,10 @@
 Welcome to Brainweb-DL, a powerful Python toolkit for downloading and converting the Brainweb dataset. 
 
 <p align="center">
-<img src=https://img.shields.io/github/license/paquiteau/brainweb-dl a=https://github.com/paquiteau/brainweb-dl/blob/main/LICENSE>
-<img src=https://www.codefactor.io/repository/github/paquiteau/brainweb-dl/badge a=https://www.codefactor.io/repository/github/paquiteau/brainweb-dl>
-<img src=https://img.shields.io/badge/style-black-black a=https://github.com/psf/black>
-<img src=https://img.shields.io/pypi/v/brainweb-dl a=https://pypi.org/project/brainweb-dl/>
+<a href=https://github.com/paquiteau/brainweb-dl/blob/master/LICENSE><img src=https://img.shields.io/github/license/paquiteau/brainweb-dl></a>
+<a href=https://www.codefactor.io/repository/github/paquiteau/brainweb-dl><img src=https://www.codefactor.io/repository/github/paquiteau/brainweb-dl/badge></a>
+<a href=https://github.com/psf/black><img src=https://img.shields.io/badge/style-black-black></a>
+<a href=https://pypi.org/project/brainweb-dl><img src=https://img.shields.io/pypi/v/brainweb-dl></a>
 </p>
 
 ## Features
@@ -29,7 +29,7 @@ The cached data directory follows this priority order:
 ```python
 from brainweb_dl import get_mri 
 
-data = get_mri(subject=44, contrast="T1")
+data = get_mri(sub_id=44, contrast="T1")
 ```
 
 The Brainweb dataset is downloaded and cached by default in the `~/.cache/brainweb` folder.
