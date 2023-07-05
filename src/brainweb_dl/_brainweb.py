@@ -386,23 +386,22 @@ def _request_get_brainweb(
         path = Path(path)
         path.parent.mkdir(exist_ok=True, parents=True)
     # download
-    with io.BytesIO() as buffer:
-        with tqdm(
-            total=float(d.headers.get("Content-length", 0)),
-            desc=f"Downloading {download_command}",
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            leave=False,
-            position=2,
-        ) as pbar:
-            for chunk in d.iter_content(chunk_size=1024):
-                if chunk:
-                    buffer.write(chunk)
-                    pbar.update(len(chunk))
+    with io.BytesIO() as buffer, tqdm(
+        total=float(d.headers.get("Content-length", 0)),
+        desc=f"Downloading {download_command}",
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+        leave=False,
+        position=2,
+    ) as pbar:
+        for chunk in d.iter_content(chunk_size=1024):
+            if chunk:
+                buffer.write(chunk)
+                pbar.update(len(chunk))
         data = np.frombuffer(gzip.decompress(buffer.getvalue()), dtype=dtype)
     if data.size != np.prod(shape):
-        raise ValueError(f"Error downloading {download_command}")
+        raise ValueError(f"Mismatch between data size and shape {data.size} != {shape}")
     data = data.reshape(shape)
     if obj_mode:
         return data
