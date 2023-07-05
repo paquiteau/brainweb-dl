@@ -15,6 +15,12 @@ from ._brainweb import (
 
 logger = logging.getLogger("brainweb_dl")
 
+SCIPY_AVAILABLE = True
+try:
+    import scipy as sp
+except ImportError:
+    SCIPY_AVAILABLE = False
+
 
 def get_mri(
     sub_id: int,
@@ -66,7 +72,16 @@ def get_mri(
         filename = get_brainweb20(sub_id, segmentation="fuzzy")
         return _apply_contrast(filename, 20, contrast, rng)
     filename = get_brainweb20_T1(sub_id)
-    return nib.load(filename).get_fdata()
+
+    data = nib.load(filename).get_fdata()
+    if shape != data.shape and SCIPY_AVAILABLE:
+        # rescale the data
+        data_rescaled = sp.ndimage.zoom(data, np.array(data.shape) / np.array(shape))
+        return data_rescaled
+    elif shape != data.shape and not SCIPY_AVAILABLE:
+        raise RuntimeError("scipy is required to rescale the data.")
+    else:
+        return data
 
 
 def _apply_contrast(
