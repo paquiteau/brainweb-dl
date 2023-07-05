@@ -6,7 +6,12 @@ from typing import Literal
 
 import nibabel as nib
 import numpy as np
-from ._brainweb import _load_tissue_map, get_brainweb1, get_brainweb20
+from ._brainweb import (
+    _load_tissue_map,
+    get_brainweb1,
+    get_brainweb20,
+    get_brainweb20_T1,
+)
 
 logger = logging.getLogger("brainweb_dl")
 
@@ -57,9 +62,11 @@ def get_mri(
         filename = get_brainweb1("fuzzy", res=1, noise=0, field_value=0)
 
         return _apply_contrast(filename, 1, contrast, rng)
-
-    filename = get_brainweb20(sub_id, segmentation="fuzzy")
-    return _apply_contrast(filename, 20, contrast, rng)
+    if contrast != "T1":
+        filename = get_brainweb20(sub_id, segmentation="fuzzy")
+        return _apply_contrast(filename, 20, contrast, rng)
+    filename = get_brainweb20_T1(sub_id)
+    return nib.load(filename).get_fdata()
 
 
 def _apply_contrast(

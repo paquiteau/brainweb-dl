@@ -54,6 +54,7 @@ BASE_URL = "http://brainweb.bic.mni.mcgill.ca/cgi/brainweb1/"
 
 BIG_RES = (362, 434, 362)
 STD_RES = (181, 217, 181)
+T1_20_RES = (181, 256, 256)
 
 
 def get_brainweb_dir(brainweb_dir: os.PathLike = None) -> os.PathLike:
@@ -149,6 +150,8 @@ def get_brainweb20(
     os.PathLike
         Path to downloaded file.
     """
+    if s not in SUB_ID:
+        raise ValueError(f"subject id {s} not in brainweb20 dataset.")
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     path = brainweb_dir / f"brainweb_s{s:02d}_{segmentation}.{extension}"
     if path.exists() and not force:
@@ -190,6 +193,44 @@ def get_brainweb20(
     else:
         raise ValueError("segmentation must be 'crisp' or 'fuzzy'")
     return save_array(data, path)
+
+
+def get_brainweb20_T1(
+    s: int,
+    brainweb_dir: os.PathLike = ".brainweb",
+    force: bool = False,
+    extension: Literal["nii.gz", "nii"] = "nii.gz",
+) -> os.PathLike | np.ndarray:
+    """Download the Brainweb1 phantom as a nifti file.
+
+    Parameters
+    ----------
+    s : int
+        subject id.
+    brainweb_dir : os.PathLike
+       brainweb_directory to download the data.
+    force : bool
+        force download even if the file already exists.
+    extension: "nii.gz" | "nii"
+        extension of the downloaded file.
+
+    Returns
+    -------
+    os.PathLike
+        Path to downloaded file.
+
+    Notes
+    -----
+    This is a simple interface to the form available at:
+    https://brainweb.bic.mni.mcgill.ca/brainweb/selection_normal.html
+    """
+    brainweb_dir = get_brainweb_dir(brainweb_dir)
+    # download of contrasted images
+    download_command = f"subject{s:02d}_t1w"
+    fname = f"subject{s:02d}_t1w.{extension}"
+    return _request_get_brainweb(
+        download_command, brainweb_dir / fname, force, shape=T1_20_RES, dtype=np.uint16
+    )
 
 
 def get_brainweb1(
