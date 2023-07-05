@@ -37,7 +37,7 @@ The Brainweb dataset is downloaded and cached by default in the `~/.cache/brainw
 ### Command Line Interface
 
 ```bash
-$ brainweb-dl 44 --contrast=T1
+brainweb-dl 44 --contrast=T1
 ```
 
 For more information, see `brainweb-dl --help`.
@@ -47,7 +47,7 @@ For more information, see `brainweb-dl --help`.
 Get up and running quickly!
 
 ```bash 
-$ pip install brainweb-dl
+pip install brainweb-dl
 ```
 
 ### Development
@@ -55,9 +55,9 @@ $ pip install brainweb-dl
 Join our community and contribute to Brainweb-DL!
 
 ```bash
-$ git clone git@github.com/paquiteau/brainweb-dl 
-$ cd brainweb-dl
-$ pip install -e .[dev,test,doc]
+git clone git@github.com/paquiteau/brainweb-dl 
+cd brainweb-dl
+pip install -e .[dev,test,doc]
 ```
 
 ### TODO List
