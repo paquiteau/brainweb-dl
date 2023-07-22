@@ -76,7 +76,7 @@ def get_mri(
     data = nib.load(filename).get_fdata()
     if shape != data.shape and SCIPY_AVAILABLE:
         # rescale the data
-        data_rescaled = sp.ndimage.zoom(data, np.array(data.shape) / np.array(shape))
+        data_rescaled = sp.ndimage.zoom(data, np.array(shape) / np.array(data.shape))
         return data_rescaled
     elif shape != data.shape and not SCIPY_AVAILABLE:
         raise RuntimeError("scipy is required to rescale the data.")
