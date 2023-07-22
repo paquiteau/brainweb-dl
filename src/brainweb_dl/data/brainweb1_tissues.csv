@@ -1,4 +1,4 @@
-Tissue,ID,Label,T1,T2,T2*,PD
+Tissue,ID,Label,T1 (ms),T2 (ms),T2* (ms),PD (ms)
 Background,bck,0,0,0,0,0
 CSF,csf,1,2569,329,58,1
 GM,gry,2,833,83,69,0.86

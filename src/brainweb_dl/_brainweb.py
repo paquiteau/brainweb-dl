@@ -41,13 +41,13 @@ from tqdm.auto import tqdm
 logger = logging.getLogger("brainweb")
 
 # +fmt: off
-SUB_ID = [4, 5, 6, 18, 20, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
+SUB_ID = (4, 5, 6, 18, 20, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54)
 # +fmt: on
 BRAINWEB_VALUES = {1: "brainweb1_tissues.csv", 20: "brainweb20_tissues.csv"}
 
-ALLOWED_NOISE_LEVEL = [0, 1, 3, 5, 7, 9]
-ALLOWED_RF = [0, 20, 40]
-ALLOWED_RES = [1, 3, 5, 7, 9]
+ALLOWED_NOISE_LEVEL = (0, 1, 3, 5, 7, 9)
+ALLOWED_RF = (0, 20, 40)
+ALLOWED_RES = (1, 3, 5, 7, 9)
 
 
 BASE_URL = "http://brainweb.bic.mni.mcgill.ca/cgi/brainweb1/"
@@ -201,7 +201,7 @@ def get_brainweb20_T1(
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
 ) -> os.PathLike | np.ndarray:
-    """Download the Brainweb1 phantom as a nifti file.
+    """Download the Brainweb20 T1 Phantom.
 
     Parameters
     ----------
@@ -273,7 +273,7 @@ def get_brainweb1(
     https://brainweb.bic.mni.mcgill.ca/brainweb/selection_normal.html
     """
     brainweb_dir = get_brainweb_dir(brainweb_dir)
-
+    shape = STD_RES
     if res not in ALLOWED_RES:
         raise ValueError(f"Resolution must be in {ALLOWED_RES}")
     if noise not in ALLOWED_NOISE_LEVEL:
@@ -281,46 +281,67 @@ def get_brainweb1(
     if field_value not in ALLOWED_RF:
         raise ValueError(f"RF field value must be in {ALLOWED_RF}")
 
-    if type == "fuzzy":
-        # The case of fuzzy segmentation is a bit special.
-        # We download all the fuzzy segmentation and create a 4D volume.
-        # The 4th dimension is the segmentation type.
-        fname = f"phantom_{res:.1f}mm_normal_fuzzy.{extension}"
+    if type not in ["T1", "T2", "PD"]:
+        raise ValueError("type must be in {'T1', 'T2', 'PD'}")
+        # download of contrasted images
+    download_command = f"{type}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
+    fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
+    shape = (int(np.rint(STD_RES[0] / res)), *STD_RES[1:])
+    return _request_get_brainweb(
+        download_command, brainweb_dir / fname, force, shape=shape, dtype=np.uint16
+    )
+
+
+def get_brainweb1_seg(
+    segmentation: Literal["crisp", "fuzzy"] = "crisp",
+    extension: Literal["nii.gz", "nii"] = "nii.gz",
+    brainweb_dir: os.PathLike = ".brainweb",
+    force: bool = False,
+) -> os.PathLike:
+    """Download the Brainweb1 phantom segmentation as a nifti file."""
+    # The case of fuzzy segmentation is a bit special.
+    # We download all the fuzzy segmentation and create a 4D volume.
+    # The 4th dimension is the segmentation type.
+    if segmentation not in ["crisp", "fuzzy"]:
+        raise ValueError("type must be in {'crisp', 'fuzzy'}")
+    if segmentation == "crisp":
+        download_command = "phantom_1.0mm_normal_crisp"
+        fname = f"phantom_1.0mm_normal_crisp.{extension}"
         path = brainweb_dir / fname
         if path.exists() and not force:
             return path
-        tissue_map = _load_tissue_map(1)
-        data = np.zeros((*STD_RES, len(tissue_map)))
-        for i, row in tqdm(
-            enumerate(tissue_map),
-            desc="Downloading tissues",
-            total=len(tissue_map),
-            position=1,
-            leave=False,
-        ):
-            name = f"phantom_{res:.1f}mm_normal_{row['ID']}"
-            data[..., i] = _request_get_brainweb(
-                name,
-                path=brainweb_dir / f"{name}.{extension}",  # placeholder
-                dtype=np.uint16,
-                shape=STD_RES,
-                obj_mode=True,
-            )
-        # Create the 4D volume.
-        nib.save(nib.Nifti1Image(data, affine=np.eye(4)), path)
+        return _request_get_brainweb(
+            download_command,
+            brainweb_dir / fname,
+            force,
+            shape=STD_RES,
+            dtype=np.uint16,
+        )
+    brainweb_dir = get_brainweb_dir(brainweb_dir)
+    fname = f"phantom_1.0mm_normal_fuzzy.{extension}"
+    path = brainweb_dir / fname
+    if path.exists() and not force:
         return path
-    elif type == "crisp":
-        download_command = f"phantom_{res:.1f}mm_normal_crisp"
-        fname = f"phantom_{res:.1f}mm_normal_crisp.{extension}"
-    elif type in ["T1", "T2", "PD"]:
-        # download of contrasted images
-        download_command = f"{type}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
-        fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
-    else:
-        raise ValueError("type must be in {'T1', 'T2', 'PD', 'crisp', 'fuzzy'}")
-    return _request_get_brainweb(
-        download_command, brainweb_dir / fname, force, shape=STD_RES, dtype=np.uint16
-    )
+    tissue_map = _load_tissue_map(1)
+    data = np.zeros((*STD_RES, len(tissue_map)))
+    for i, row in tqdm(
+        enumerate(tissue_map),
+        desc="Downloading tissues",
+        total=len(tissue_map),
+        position=1,
+        leave=False,
+    ):
+        name = f"phantom_1.0mm_normal_{row['ID']}"
+        data[..., i] = _request_get_brainweb(
+            name,
+            path=brainweb_dir / f"{name}.{extension}",  # placeholder
+            dtype=np.uint16,
+            shape=STD_RES,
+            obj_mode=True,
+        )
+    # Create the 4D volume.
+    nib.save(nib.Nifti1Image(data, affine=np.eye(4)), path)
+    return path
 
 
 def _request_get_brainweb(

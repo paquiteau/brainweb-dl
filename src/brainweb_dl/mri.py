@@ -9,6 +9,7 @@ import numpy as np
 from ._brainweb import (
     _load_tissue_map,
     get_brainweb1,
+    get_brainweb1_seg,
     get_brainweb20,
     get_brainweb20_T1,
 )
@@ -28,6 +29,11 @@ def get_mri(
     shape: tuple[int, int, int] = None,
     rng: int | np.random.Generator = None,
     brainweb_dir: os.PathLike = None,
+    res: int = 1,
+    noise: int = 0,
+    field_value: int = 0,
+    force: bool = False,
+    extension: Literal["nii", "nii.gz", "npy", None] = ".nii.gz",
 ) -> np.ndarray:
     """Get MRI data from a brainweb fuzzy segmentation.
 
@@ -43,7 +49,14 @@ def get_mri(
         Random number generator.
     dir : str, optional
         Brainweb download directory.
-
+    res : int, optional
+        Resolution of the data, only use for subject 0.
+    noise : int, optional
+        Noise level of the data., only use for subject 0.
+    field_value : int, optional, only use for subject 0.
+        Field value of the data.
+    kwargs : dict, optional
+        Additional arguments to pass to the brainweb functions.
 
     Returns
     -------
@@ -54,10 +67,11 @@ def get_mri(
         if contrast != "T2*":
             filename = get_brainweb1(
                 contrast,
-                res=1,
-                noise=0,
-                field_value=0,
+                res=res,
+                noise=noise,
+                field_value=field_value,
                 brainweb_dir=brainweb_dir,
+                force=force,
             )
             data = nib.load(filename).get_fdata()
             return data
@@ -65,21 +79,24 @@ def get_mri(
         logger.warning(
             "Brainweb 1 does not have T2* data. The values are going to be empirical."
         )
-        filename = get_brainweb1("fuzzy", res=1, noise=0, field_value=0)
+        filename = get_brainweb1_seg(
+            "fuzzy",
+            force=force,
+            brainweb_dir=brainweb_dir,
+        )
 
         return _apply_contrast(filename, 1, contrast, rng)
-    if contrast != "T1":
+    if contrast == "T1":
+        filename = get_brainweb20_T1(sub_id)
+        data = nib.load(filename).get_fdata()
+    else:
         filename = get_brainweb20(sub_id, segmentation="fuzzy")
-        return _apply_contrast(filename, 20, contrast, rng)
-    filename = get_brainweb20_T1(sub_id)
+        data = _apply_contrast(filename, 20, contrast, rng)
 
-    data = nib.load(filename).get_fdata()
-    if shape != data.shape and SCIPY_AVAILABLE:
+    if shape is not None and shape != data.shape:
         # rescale the data
         data_rescaled = sp.ndimage.zoom(data, np.array(shape) / np.array(data.shape))
         return data_rescaled
-    elif shape != data.shape and not SCIPY_AVAILABLE:
-        raise RuntimeError("scipy is required to rescale the data.")
     else:
         return data
 
@@ -112,8 +129,16 @@ def _apply_contrast(
     tissues = _load_tissue_map(tissue_map)
     data = nib.load(file_fuzzy).get_fdata(dtype=np.float32)
     ret_data = np.zeros(data.shape[:-1], dtype=np.float32)
-    contrast_mean = [int(t[f"{contrast} (ms)"]) for t in tissues]
-    contrast_std = [int(t[f"{contrast} Std (ms)"]) for t in tissues]
+    contrast_mean = []
+    contrast_std = []
+    for t in tissues:
+        contrast_mean.append(float(t[f"{contrast} (ms)"]))
+        try:
+            std_val = float(t[f"{contrast} Std (ms)"])
+        except KeyError:
+            std_val = 0
+        contrast_std.append(std_val)
+
     for tlabel in range(1, len(tissues)):
         mask = data[..., tlabel] > 0
         ret_data[mask] += data[mask, tlabel] * rng.normal(
