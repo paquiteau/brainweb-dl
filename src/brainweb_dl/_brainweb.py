@@ -81,7 +81,7 @@ def get_brainweb_dir(brainweb_dir: os.PathLike = None) -> os.PathLike:
         brainweb_dir = os.environ.get("BRAINWEB_DIR", None)
     if brainweb_dir is None:
         brainweb_dir = Path.home() / ".cache" / "brainweb"
-    os.makedirs(brainweb_dir, exist_ok=True)
+    os.makedirs(Path(brainweb_dir), exist_ok=True)
     return Path(brainweb_dir)
 
 
@@ -299,9 +299,7 @@ def get_brainweb1_seg(
     force: bool = False,
 ) -> os.PathLike:
     """Download the Brainweb1 phantom segmentation as a nifti file."""
-    # The case of fuzzy segmentation is a bit special.
-    # We download all the fuzzy segmentation and create a 4D volume.
-    # The 4th dimension is the segmentation type.
+    brainweb_dir = get_brainweb_dir(brainweb_dir)
     if segmentation not in ["crisp", "fuzzy"]:
         raise ValueError("type must be in {'crisp', 'fuzzy'}")
     if segmentation == "crisp":
@@ -317,7 +315,6 @@ def get_brainweb1_seg(
             shape=STD_RES,
             dtype=np.uint16,
         )
-    brainweb_dir = get_brainweb_dir(brainweb_dir)
     fname = f"phantom_1.0mm_normal_fuzzy.{extension}"
     path = brainweb_dir / fname
     if path.exists() and not force:
