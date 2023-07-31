@@ -94,8 +94,28 @@ def get_mri(
         data = _apply_contrast(filename, 20, contrast, rng)
 
     if shape is not None and shape != data.shape:
+        if isinstance(shape, float):
+            zoom = shape
+            zoom = (zoom,) * 3
+        elif -1 in shape:
+            if np.prod(data.shape) <= 0:
+                raise ValueError(
+                    "The zoom factor should only have two -1 in its definition"
+                    "(ex. `(-1,-1, 64)` )."
+                )
+            ref_ax = [i for i, v in enumerate(shape) if v > 0][0]
+            zoom = shape[ref_ax] / data.shape[ref_ax]
+            zoom = (zoom,) * 3
+        else:
+            zoom = np.array(shape) / np.array(data.shape)
+
+        if contrast == "fuzzy":
+            # Don't rescale the tissue dimension.
+            zoom = (*zoom, 1)
         # rescale the data
-        data_rescaled = sp.ndimage.zoom(data, np.array(shape) / np.array(data.shape))
+        data_rescaled = sp.ndimage.zoom(data, zoom=zoom)
+        # clip the data to the original range.
+        data_rescaled = np.clip(data_rescaled, data.min(), data.max())
         return data_rescaled
     else:
         return data
