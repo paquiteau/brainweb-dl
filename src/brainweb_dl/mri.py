@@ -79,7 +79,7 @@ def get_mri(
 
         elif contrast == "T2*":
             logger.warning(
-                "Brainweb 1 does not have T2* data. The values are going to be empirical."
+                "Brainweb 1 does not have T2* data. The provided values are empirical."
             )
             filename = get_brainweb1_seg(
                 "fuzzy",
