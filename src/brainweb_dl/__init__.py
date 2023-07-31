@@ -1,3 +1,4 @@
+"""Brainweb downloader."""
 from .mri import get_mri
 
 from ._brainweb import (

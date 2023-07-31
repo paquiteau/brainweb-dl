@@ -1,12 +1,11 @@
 """CLI function for the package."""
 from __future__ import annotations
 import argparse
-import logging
 
 import nibabel as nib
 import numpy as np
 
-from ._brainweb import SUB_ID, get_brainweb1, get_brainweb1_seg, get_brainweb20_multiple
+from ._brainweb import SUB_ID, get_brainweb1_seg, get_brainweb20_multiple
 from .mri import get_mri
 
 
