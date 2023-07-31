@@ -7,3 +7,6 @@ tmp/
 *.egg
 build
 htmlcov
+_version.py
+
+.brainweb
