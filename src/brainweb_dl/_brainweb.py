@@ -320,7 +320,7 @@ def get_brainweb1_seg(
     if path.exists() and not force:
         return path
     tissue_map = _load_tissue_map(1)
-    data = np.zeros((*STD_RES, len(tissue_map)))
+    data = np.zeros((*STD_RES, len(tissue_map)), dtype=np.uint16)
     for i, row in tqdm(
         enumerate(tissue_map),
         desc="Downloading tissues",
@@ -337,7 +337,7 @@ def get_brainweb1_seg(
             obj_mode=True,
         )
     # Create the 4D volume.
-    nib.save(nib.Nifti1Image(data, affine=np.eye(4)), path)
+    nib.save(nib.Nifti1Image(abs(data), affine=np.eye(4)), path)
     return path
 
 
@@ -420,7 +420,7 @@ def _request_get_brainweb(
         data = np.frombuffer(gzip.decompress(buffer.getvalue()), dtype=dtype)
     if data.size != np.prod(shape):
         raise ValueError(f"Mismatch between data size and shape {data.size} != {shape}")
-    data = data.reshape(shape)
+    data = abs(data).reshape(shape)
     if obj_mode:
         return data
 

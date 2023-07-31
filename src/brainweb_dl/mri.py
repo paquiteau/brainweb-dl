@@ -64,7 +64,7 @@ def get_mri(
         MRI data.
     """
     if sub_id == 0:
-        if contrast != "T2*":
+        if contrast in ["T1", "T2", "PD"]:
             filename = get_brainweb1(
                 contrast,
                 res=res,
@@ -73,25 +73,38 @@ def get_mri(
                 brainweb_dir=brainweb_dir,
                 force=force,
             )
-            data = nib.load(filename).get_fdata()
-            return data
 
-        logger.warning(
-            "Brainweb 1 does not have T2* data. The values are going to be empirical."
-        )
-        filename = get_brainweb1_seg(
-            "fuzzy",
-            force=force,
-            brainweb_dir=brainweb_dir,
-        )
+            data = nib.load(filename)
+            data = data.get_fdata()
 
-        return _apply_contrast(filename, 1, contrast, rng)
-    if contrast == "T1":
-        filename = get_brainweb20_T1(sub_id)
-        data = nib.load(filename).get_fdata()
+        elif contrast == "T2*":
+            logger.warning(
+                "Brainweb 1 does not have T2* data. The values are going to be empirical."
+            )
+            filename = get_brainweb1_seg(
+                "fuzzy",
+                force=force,
+                brainweb_dir=brainweb_dir,
+            )
+
+            data = _apply_contrast(filename, 1, contrast, rng)
+        elif contrast in ["fuzzy", "crisp"]:
+            filename = get_brainweb1_seg(
+                contrast, force=force, brainweb_dir=brainweb_dir
+            )
+            data = nib.load(filename)
+            data = np.asanyarray(data.dataobj, dtype=np.uint16)
+            if contrast == "fuzzy":
+                data = data.astype(np.float32) / 4095
+        else:
+            raise ValueError(f"Unknown contrast {contrast}")
     else:
-        filename = get_brainweb20(sub_id, segmentation="fuzzy")
-        data = _apply_contrast(filename, 20, contrast, rng)
+        if contrast == "T1":
+            filename = get_brainweb20_T1(sub_id)
+            data = nib.load(filename).get_fdata()
+        else:
+            filename = get_brainweb20(sub_id, segmentation="fuzzy")
+            data = _apply_contrast(filename, 20, contrast, rng)
 
     if shape is not None and shape != data.shape:
         if isinstance(shape, float):
@@ -142,12 +155,12 @@ def _apply_contrast(
     -------
     np.ndarray
         MRI data with the applied contrast.
-
     """
     rng = np.random.default_rng(rng)
 
     tissues = _load_tissue_map(tissue_map)
     data = nib.load(file_fuzzy).get_fdata(dtype=np.float32)
+    data /= 4095  # Data was encode in 12 bits
     ret_data = np.zeros(data.shape[:-1], dtype=np.float32)
     contrast_mean = []
     contrast_std = []
