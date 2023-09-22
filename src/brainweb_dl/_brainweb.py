@@ -28,7 +28,7 @@ else:
 import gzip
 import io
 from pathlib import Path
-from typing import Literal, overload
+from typing import Literal, overload, Union
 from enum import Enum, EnumMeta
 
 from joblib import Parallel, delayed
@@ -89,7 +89,7 @@ class BrainWebTissueMap(Enum):
     v2 = Path(str(files("brainweb_dl.data") / "brainweb20_tissues.csv"))
 
 
-BrainWebDirType = os.PathLike | None
+BrainWebDirType = Union[Path, None]
 
 # +fmt: off
 SUB_ID = [4, 5, 6, 18, 20, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
