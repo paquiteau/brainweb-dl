@@ -29,7 +29,7 @@ jobs:
         run: ruff src
       - name: mypy Check
         shell: bash
-        run: mypy src --ignore-missing-imports
+        run: mypy src --non-interactive --ignore-missing-imports --install-types
 
   test-cpu:
     runs-on: ubuntu-latest
