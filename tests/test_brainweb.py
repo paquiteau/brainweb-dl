@@ -44,12 +44,14 @@ def test_get_mri20T1(tmp_path):
 
 @pytest.mark.parametrize("contrast", ["T2*"])
 def test_get_mri20_custom(contrast, tmp_path):
+    """Test brainweb v2 with T2* data."""
     data = get_mri(4, contrast, brainweb_dir=tmp_path, force=True)
     assert data.shape == (362, 434, 362)
 
 
 @pytest.mark.parametrize("contrast", ["T2*"])
 def test_get_mri1_custom(contrast, tmp_path):
+    """Test brainweb v1 with T2* data."""
     data = get_mri(0, contrast, brainweb_dir=tmp_path, force=True)
     assert data.shape == (181, 217, 181)
 

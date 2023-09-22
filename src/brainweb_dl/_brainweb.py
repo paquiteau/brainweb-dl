@@ -20,7 +20,6 @@ import csv
 import logging
 import os
 import sys
-import functools
 
 if sys.version_info > (3, 9):
     from importlib.resources import files
@@ -30,6 +29,7 @@ import gzip
 import io
 from pathlib import Path
 from typing import Literal
+from enum import Enum, EnumMeta
 
 from joblib import Parallel, delayed
 import nibabel as nib
@@ -40,8 +40,59 @@ from tqdm.auto import tqdm
 
 logger = logging.getLogger("brainweb")
 
+
+class ContainsEnumMeta(EnumMeta):
+    def __contains__(cls, item):  # noqa
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        else:
+            return True
+
+
+class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
+    @classmethod
+    def _missing_(cls, value):  # noqa
+        value = value.lower()
+        value = value.replace("*", "s")
+        for member in cls:
+            if member.value.lower() == value:
+                return member
+        return None
+
+    def __getitem__(self, name):  # noqa
+        # allow T2* to be T2s
+        name = name.replace("*", "s")
+        return super().__getitem__(name.upper())
+
+
+class Contrast(MyEnum):
+    T1 = "T1"
+    T2 = "T2"
+    T2s = "T2s"
+    PD = "PD"
+
+
+class Segmentation(MyEnum):
+    CRISP = "crisp"
+    FUZZY = "fuzzy"
+
+
+class BrainWebVersion(Enum):
+    v1 = 1
+    v2 = 20
+
+
+class BrainWebTissueMap(Enum):
+    v1 = Path(str(files("brainweb_dl.data") / "brainweb1_tissues.csv"))
+    v2 = Path(str(files("brainweb_dl.data") / "brainweb20_tissues.csv"))
+
+
+BrainWebDirType = os.PathLike | str | None
+
 # +fmt: off
-SUB_ID = (4, 5, 6, 18, 20, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54)
+SUB_ID = [4, 5, 6, 18, 20, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
 # +fmt: on
 BRAINWEB_VALUES = {1: "brainweb1_tissues.csv", 20: "brainweb20_tissues.csv"}
 
@@ -57,7 +108,7 @@ STD_RES = (181, 217, 181)
 T1_20_RES = (181, 256, 256)
 
 
-def get_brainweb_dir(brainweb_dir: os.PathLike = None) -> os.PathLike:
+def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
     """Get the Brainweb directory.
 
     Parameters
@@ -86,11 +137,11 @@ def get_brainweb_dir(brainweb_dir: os.PathLike = None) -> os.PathLike:
 
 
 def get_brainweb20_multiple(
-    subject: int | list | Literal["all"],
-    brainweb_dir: os.PathLike = None,
+    subject: int | list[int] | Literal["all"],
+    brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-    segmentation: Literal["crisp", "fuzzy"] = "crisp",
-) -> list[os.PathLike]:
+    segmentation: Segmentation = Segmentation.CRISP,
+) -> list[os.PathLike] | os.PathLike:
     """Download sample or all brainweb subjects.
 
     Parameters
@@ -125,9 +176,9 @@ def get_brainweb20_multiple(
 
 def get_brainweb20(
     s: int,
-    brainweb_dir: os.PathLike = None,
+    brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-    segmentation: Literal["crisp", "fuzzy"] = "crisp",
+    segmentation: Segmentation = Segmentation.CRISP,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
 ) -> os.PathLike:
     """Download one subject of brainweb dataset.
@@ -157,14 +208,14 @@ def get_brainweb20(
     if path.exists() and not force:
         return path
 
-    if segmentation == "crisp":
+    if segmentation == Segmentation.CRISP:
         download_command = f"subject{s:02d}_{segmentation}"
         data = _request_get_brainweb(
-            download_command, path, shape=BIG_RES, dtype=np.uint16, obj_mode=True
+            download_command, path, shape=BIG_RES, dtype=np.uint16
         )
         data = data >> 4
         data = data.astype(np.uint8)
-    elif segmentation == "fuzzy":
+    elif segmentation == Segmentation.FUZZY:
         # Download all the fuzzy segmentation and create a 4D volume.
         path = Path(brainweb_dir) / f"brainweb_s{s:02d}_fuzzy.{extension}"
         # The case of fuzzy segmentation is a bit special.
@@ -172,7 +223,7 @@ def get_brainweb20(
         # The 4th dimension is the segmentation type.
         if path.exists() and not force:
             return path
-        tissue_map = _load_tissue_map(20)
+        tissue_map = _load_tissue_map(BrainWebTissueMap.v2.value)
         data = np.zeros((*BIG_RES, len(tissue_map)), dtype=np.uint16)
 
         # For faster download, let's use joblib.
@@ -183,7 +234,6 @@ def get_brainweb20(
                 brainweb_dir / f"{name}",  # placeholder value
                 dtype=np.uint16,
                 shape=BIG_RES,
-                obj_mode=True,
             )
 
         Parallel(n_jobs=-1, backend="threading")(
@@ -197,10 +247,10 @@ def get_brainweb20(
 
 def get_brainweb20_T1(
     s: int,
-    brainweb_dir: os.PathLike = ".brainweb",
+    brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> os.PathLike | np.ndarray:
+) -> os.PathLike:
     """Download the Brainweb20 T1 Phantom.
 
     Parameters
@@ -228,20 +278,29 @@ def get_brainweb20_T1(
     # download of contrasted images
     download_command = f"subject{s:02d}_t1w"
     fname = f"subject{s:02d}_t1w.{extension}"
-    return _request_get_brainweb(
-        download_command, brainweb_dir / fname, force, shape=T1_20_RES, dtype=np.uint16
-    )
+    path = brainweb_dir / fname
+    if not path.exists() or force:
+        data = _request_get_brainweb(
+            download_command,
+            brainweb_dir / fname,
+            force,
+            shape=T1_20_RES,
+            dtype=np.uint16,
+        )
+        return save_array(data, path)
+    else:
+        return path
 
 
 def get_brainweb1(
-    type: Literal["T1", "T2", "PD", "crisp", "fuzzy"] = "T2",
+    type: Contrast | Segmentation,
     res: int = 1,
     noise: int = 0,
     field_value: int = 0,
-    brainweb_dir: os.PathLike = ".brainweb",
+    brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> os.PathLike | np.ndarray:
+) -> os.PathLike:
     """Download the Brainweb1 phantom as a nifti file.
 
     Parameters
@@ -287,15 +346,19 @@ def get_brainweb1(
     download_command = f"{type}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
     fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
     shape = (int(np.rint(STD_RES[0] / res)), *STD_RES[1:])
-    return _request_get_brainweb(
+    path = brainweb_dir / fname
+    if path.exists() and not force:
+        return path
+    data = _request_get_brainweb(
         download_command, brainweb_dir / fname, force, shape=shape, dtype=np.uint16
     )
+    return save_array(data, path)
 
 
 def get_brainweb1_seg(
-    segmentation: Literal["crisp", "fuzzy"] = "crisp",
+    segmentation: Segmentation,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-    brainweb_dir: os.PathLike = ".brainweb",
+    brainweb_dir: BrainWebDirType = None,
     force: bool = False,
 ) -> os.PathLike:
     """Download the Brainweb1 phantom segmentation as a nifti file."""
@@ -308,18 +371,20 @@ def get_brainweb1_seg(
         path = brainweb_dir / fname
         if path.exists() and not force:
             return path
-        return _request_get_brainweb(
+        data = _request_get_brainweb(
             download_command,
             brainweb_dir / fname,
             force,
             shape=STD_RES,
             dtype=np.uint16,
         )
+        return save_array(data, path)
+
     fname = f"phantom_1.0mm_normal_fuzzy.{extension}"
     path = brainweb_dir / fname
     if path.exists() and not force:
         return path
-    tissue_map = _load_tissue_map(1)
+    tissue_map = _load_tissue_map(BrainWebTissueMap.v1.value)
     data = np.zeros((*STD_RES, len(tissue_map)), dtype=np.uint16)
     for i, row in tqdm(
         enumerate(tissue_map),
@@ -334,7 +399,6 @@ def get_brainweb1_seg(
             path=brainweb_dir / f"{name}.{extension}",  # placeholder
             dtype=np.uint16,
             shape=STD_RES,
-            obj_mode=True,
         )
     # Create the 4D volume.
     nib.save(nib.Nifti1Image(abs(data), affine=np.eye(4)), path)
@@ -347,8 +411,7 @@ def _request_get_brainweb(
     force: bool = False,
     dtype: DTypeLike = np.float32,
     shape: tuple = STD_RES,
-    obj_mode: bool = False,
-) -> None:
+) -> np.ndarray:
     """Request to download brainweb dataset.
 
     Parameters
@@ -376,8 +439,10 @@ def _request_get_brainweb(
     Exception
         If the download fails.
     """
-    if not obj_mode and path.exists() and not force:
-        return path
+    path = Path(path)
+    # don't download if it cached.
+    if path.exists() and not force:
+        return load_array(path)
     d = requests.get(
         BASE_URL
         + "?"
@@ -397,12 +462,9 @@ def _request_get_brainweb(
             ]
         ),
         stream=True,
-        headers={"Accept-Encoding": None, "Content-Encoding": "gzip"},
+        headers={"Accept-Encoding": "identity", "Content-Encoding": "gzip"},
     )
 
-    if not obj_mode:
-        path = Path(path)
-        path.parent.mkdir(exist_ok=True, parents=True)
     # download
     with io.BytesIO() as buffer, tqdm(
         total=float(d.headers.get("Content-length", 0)),
@@ -421,23 +483,30 @@ def _request_get_brainweb(
     if data.size != np.prod(shape):
         raise ValueError(f"Mismatch between data size and shape {data.size} != {shape}")
     data = abs(data).reshape(shape)
-    if obj_mode:
-        return data
-
-    return save_array(data, path)
+    return data
 
 
-@functools.lru_cache(maxsize=3)
-def _load_tissue_map(brainweb_set: Literal[1, 20]) -> list[dict]:
-    with open(
-        files("brainweb_dl.data").joinpath(BRAINWEB_VALUES[brainweb_set])
-    ) as csvfile:
+def _load_tissue_map(tissue_map: os.PathLike) -> list[dict]:
+    with open(tissue_map, "r+") as csvfile:
         return list(csv.DictReader(csvfile))
 
 
 def save_array(data: np.ndarray, path: os.PathLike) -> os.PathLike:
-    if path.suffix == ".npy":
-        np.save(path, data)
+    path_ = Path(path)
+    if path_.suffix == ".npy":
+        np.save(path_, data)
     else:
-        nib.save(nib.Nifti1Image(data, np.eye(4)), path)
+        nib.save(nib.Nifti1Image(data, np.eye(4)), path_)
     return path
+
+
+def load_array(path: os.PathLike, dtype: DTypeLike = None) -> np.ndarray:
+    path_ = Path(path)
+    if path_.suffix == ".npy":
+        data = np.load(path_)
+    else:
+        data = np.asanyarray(nib.nifti1.load(path_).dataobj)
+
+    if dtype is not None:
+        data = data.astype(dtype)
+    return data
