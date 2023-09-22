@@ -1,11 +1,18 @@
 """CLI function for the package."""
 from __future__ import annotations
 import argparse
+import os
+from pathlib import Path
 
 import nibabel as nib
 import numpy as np
 
-from ._brainweb import SUB_ID, get_brainweb1_seg, get_brainweb20_multiple
+from ._brainweb import (
+    SUB_ID,
+    get_brainweb1_seg,
+    get_brainweb20_multiple,
+    get_brainweb_dir,
+)
 from .mri import get_mri
 
 
@@ -31,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--brainweb-dir",
-        type=str,
+        type=Path,
         help="Brainweb directory, overrides the environment variable BRAINWEB_DIR",
     )
     parser.add_argument(
@@ -56,19 +63,20 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """CLI interface."""
     ns = parse_args()
-
+    filename: os.PathLike
+    brainweb_dir = get_brainweb_dir(ns.brainweb_dir)
     if ns.contrast in ["T1", "T2", "T2*"]:
         array = get_mri(
-            ns, ns.contrast, brainweb_dir=ns.brainweb_dir, extension=ns.format
+            ns.subject, ns.contrast, brainweb_dir=brainweb_dir, extension=ns.format
         )
-        filename = f"brainweb_{ns.subject}_{ns.contrast}.{ns.format}"
+        filename = Path(f"brainweb_{ns.subject}_{ns.contrast}.{ns.format}")
         nib.Nifti1Image(array, np.eye(4)).to_filename(filename)
     elif ns.contrast in ["crisp", "fuzzy"]:
         if ns.subject == 0:
-            filename = get_brainweb1_seg(ns.contrast, brainweb_dir=ns.brainweb_dir)
+            filename = get_brainweb1_seg(ns.contrast, brainweb_dir=brainweb_dir)
         else:
             filename = get_brainweb20_multiple(
-                ns.subject, segmentation=ns.contrast, brainweb_dir=ns.brainweb_dir
+                ns.subject, segmentation=ns.contrast, brainweb_dir=brainweb_dir
             )
     else:
         raise ValueError(f"Unknown contrast {ns.contrast}")

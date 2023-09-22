@@ -28,7 +28,7 @@ else:
 import gzip
 import io
 from pathlib import Path
-from typing import Literal
+from typing import Literal, overload
 from enum import Enum, EnumMeta
 
 from joblib import Parallel, delayed
@@ -136,8 +136,28 @@ def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
     return Path(brainweb_dir)
 
 
+@overload
 def get_brainweb20_multiple(
-    subject: int | list[int] | Literal["all"],
+    subject: Literal["all"] | list[int],
+    brainweb_dir: BrainWebDirType = None,
+    force: bool = False,
+    segmentation: Segmentation = Segmentation.CRISP,
+) -> list[os.PathLike]:
+    ...
+
+
+@overload
+def get_brainweb20_multiple(
+    subject: int,
+    brainweb_dir: BrainWebDirType = None,
+    force: bool = False,
+    segmentation: Segmentation = Segmentation.CRISP,
+) -> os.PathLike:
+    ...
+
+
+def get_brainweb20_multiple(
+    subject: int | Literal["all"] | list[int],
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
