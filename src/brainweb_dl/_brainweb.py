@@ -89,7 +89,7 @@ class BrainWebTissueMap(Enum):
     v2 = Path(str(files("brainweb_dl.data") / "brainweb20_tissues.csv"))
 
 
-BrainWebDirType = os.PathLike | str | None
+BrainWebDirType = os.PathLike | None
 
 # +fmt: off
 SUB_ID = [4, 5, 6, 18, 20, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
@@ -128,9 +128,11 @@ def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
     - The environment variable BRAINWEB_DIR.
     - The defaultbrainweb_directory ~/.cache/brainweb.
     """
-    if brainweb_dir is None:
-        brainweb_dir = os.environ.get("BRAINWEB_DIR", None)
-    if brainweb_dir is None:
+    if brainweb_dir is not None:
+        brainweb_dir = Path(brainweb_dir)
+    elif "BRAINWEB_DIR" in os.environ:
+        brainweb_dir = Path(os.environ["BRAINWEB_DIR"])
+    else:
         brainweb_dir = Path.home() / ".cache" / "brainweb"
     os.makedirs(Path(brainweb_dir), exist_ok=True)
     return Path(brainweb_dir)
