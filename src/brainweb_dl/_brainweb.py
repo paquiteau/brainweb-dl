@@ -50,27 +50,27 @@ class ContainsEnumMeta(EnumMeta):
         else:
             return True
 
-
-class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
-    @classmethod
-    def _missing_(cls, value):  # noqa
-        value = value.lower()
-        value = value.replace("*", "s")
-        for member in cls:
-            if member.value.lower() == value:
-                return member
-        return None
-
     def __getitem__(self, name):  # noqa
         # allow T2* to be T2s
         name = name.replace("*", "s")
         return super().__getitem__(name.upper())
 
 
+class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
+    @classmethod
+    def _missing_(cls, value):  # noqa
+        value = value.upper()
+        value = value.replace("*", "s")
+        for member in cls:
+            if member.value.upper() == value.upper():
+                return member
+        return None
+
+
 class Contrast(MyEnum):
     T1 = "T1"
     T2 = "T2"
-    T2s = "T2s"
+    T2S = "T2s"
     PD = "PD"
 
 
@@ -229,41 +229,44 @@ def get_brainweb20(
     path = brainweb_dir / f"brainweb_s{s:02d}_{segmentation}.{extension}"
     if path.exists() and not force:
         return path
+    try:
+        segmentation = Segmentation(segmentation)
+    except ValueError as e:
+        raise ValueError("Unknown segmentation") from e
 
-    if segmentation == Segmentation.CRISP:
+    if segmentation is Segmentation.CRISP:
         download_command = f"subject{s:02d}_{segmentation}"
         data = _request_get_brainweb(
             download_command, path, shape=BIG_RES, dtype=np.uint16
         )
         data = data >> 4
         data = data.astype(np.uint8)
-    elif segmentation == Segmentation.FUZZY:
-        # Download all the fuzzy segmentation and create a 4D volume.
-        path = Path(brainweb_dir) / f"brainweb_s{s:02d}_fuzzy.{extension}"
-        # The case of fuzzy segmentation is a bit special.
-        # We download all the fuzzy segmentation and create a 4D volume.
-        # The 4th dimension is the segmentation type.
-        if path.exists() and not force:
-            return path
-        tissue_map = _load_tissue_map(BrainWebTissueMap.v2.value)
-        data = np.zeros((*BIG_RES, len(tissue_map)), dtype=np.uint16)
+        return save_array(data, path)
+    # Fuzzy Segmentation
+    # Download all the fuzzy segmentation and create a 4D volume.
+    path = Path(brainweb_dir) / f"brainweb_s{s:02d}_fuzzy.{extension}"
+    # The case of fuzzy segmentation is a bit special.
+    # We download all the fuzzy segmentation and create a 4D volume.
+    # The 4th dimension is the segmentation type.
+    if path.exists() and not force:
+        return path
+    tissue_map = _load_tissue_map(BrainWebTissueMap.v2.value)
+    data = np.zeros((*BIG_RES, len(tissue_map)), dtype=np.uint16)
 
-        # For faster download, let's use joblib.
-        def _download_fuzzy(i: int, tissue: str, data: np.ndarray) -> None:
-            name = f"subject{s:02d}_{tissue}"
-            data[..., i] = _request_get_brainweb(
-                name,
-                brainweb_dir / f"{name}",  # placeholder value
-                dtype=np.uint16,
-                shape=BIG_RES,
-            )
-
-        Parallel(n_jobs=-1, backend="threading")(
-            delayed(_download_fuzzy)(i, tissue["ID"], data)
-            for i, tissue in enumerate(tissue_map)
+    # For faster download, let's use joblib.
+    def _download_fuzzy(i: int, tissue: str, data: np.ndarray) -> None:
+        name = f"subject{s:02d}_{tissue}"
+        data[..., i] = _request_get_brainweb(
+            name,
+            brainweb_dir / f"{name}",  # placeholder value
+            dtype=np.uint16,
+            shape=BIG_RES,
         )
-    else:
-        raise ValueError("segmentation must be 'crisp' or 'fuzzy'")
+
+    Parallel(n_jobs=-1, backend="threading")(
+        delayed(_download_fuzzy)(i, tissue["ID"], data)
+        for i, tissue in enumerate(tissue_map)
+    )
     return save_array(data, path)
 
 
@@ -315,7 +318,7 @@ def get_brainweb20_T1(
 
 
 def get_brainweb1(
-    type: Contrast | Segmentation,
+    contrast: Contrast | Segmentation,
     res: int = 1,
     noise: int = 0,
     field_value: int = 0,
@@ -327,7 +330,7 @@ def get_brainweb1(
 
     Parameters
     ----------
-    type : "T1" | "T2" | "PD" | "crisp" | "fuzzy"
+    contrast: "T1" | "T2" | "PD" | "crisp" | "fuzzy"
         Type of the phantom to download.
     res : int
         Resolution of the phantom. Must be in {1, 3, 5, 7}
@@ -355,6 +358,10 @@ def get_brainweb1(
     """
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     shape = STD_RES
+    try:
+        contrast = Contrast(contrast)
+    except ValueError as e:
+        raise ValueError("Unknown contrast") from e
     if res not in ALLOWED_RES:
         raise ValueError(f"Resolution must be in {ALLOWED_RES}")
     if noise not in ALLOWED_NOISE_LEVEL:
@@ -362,11 +369,11 @@ def get_brainweb1(
     if field_value not in ALLOWED_RF:
         raise ValueError(f"RF field value must be in {ALLOWED_RF}")
 
-    if type not in ["T1", "T2", "PD"]:
-        raise ValueError("type must be in {'T1', 'T2', 'PD'}")
+    if contrast not in [Contrast.T1, Contrast.T2, Contrast.PD]:
+        raise ValueError("contrast must be in {'T1', 'T2', 'PD'}")
         # download of contrasted images
-    download_command = f"{type}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
-    fname = f"{type}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
+    download_command = f"{contrast}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
+    fname = f"{contrast}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
     shape = (int(np.rint(STD_RES[0] / res)), *STD_RES[1:])
     path = brainweb_dir / fname
     if path.exists() and not force:
@@ -385,9 +392,12 @@ def get_brainweb1_seg(
 ) -> os.PathLike:
     """Download the Brainweb1 phantom segmentation as a nifti file."""
     brainweb_dir = get_brainweb_dir(brainweb_dir)
-    if segmentation not in ["crisp", "fuzzy"]:
-        raise ValueError("type must be in {'crisp', 'fuzzy'}")
-    if segmentation == "crisp":
+    try:
+        segmentation = Segmentation(segmentation)
+    except ValueError:
+        raise ValueError("segmentation  must be 'crisp' or 'fuzzy'")
+
+    if segmentation is Segmentation.CRISP:
         download_command = "phantom_1.0mm_normal_crisp"
         fname = f"phantom_1.0mm_normal_crisp.{extension}"
         path = brainweb_dir / fname

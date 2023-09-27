@@ -22,7 +22,7 @@ logger = logging.getLogger("brainweb_dl")
 
 SCIPY_AVAILABLE = True
 try:
-    import scipy as sp
+    import scipy as sp  # type: ignore
 except ImportError:
     SCIPY_AVAILABLE = False
 
@@ -39,7 +39,7 @@ def _get_mri_sub0(
 ) -> np.ndarray:
     if contrast in [Contrast.T1, Contrast.T2, Contrast.PD]:
         filename = get_brainweb1(
-            contrast,
+            Contrast(contrast),
             res=res,
             noise=noise,
             field_value=field_value,
@@ -47,9 +47,9 @@ def _get_mri_sub0(
             force=force,
         )
 
-        data = nib.Nifti2Image.from_filename(filename).get_fdata()
+        return nib.Nifti2Image.from_filename(filename).get_fdata()
 
-    elif Contrast(contrast) is Contrast.T2s:
+    if contrast is Contrast.T2S:
         logger.warning(
             "Brainweb 1 does not have T2s data. The provided values are empirical."
         )
@@ -59,18 +59,15 @@ def _get_mri_sub0(
             brainweb_dir=brainweb_dir,
         )
 
-        data = _apply_contrast(filename, tissue_map, contrast, rng)
-    elif contrast in Segmentation:
-        filename = get_brainweb1_seg(
-            Segmentation(contrast), force=force, brainweb_dir=brainweb_dir
-        )
-        data_ = nib.Nifti2Image.from_filename(filename)
-        data = np.asanyarray(data_.dataobj, dtype=np.uint16)
-        if contrast == Segmentation.FUZZY:
-            data = data.astype(np.float32) / 4095
-    else:
-        raise ValueError(f"Unknown contrast {contrast}")
-
+        return _apply_contrast(filename, tissue_map, contrast, rng)
+    # Segmenation data.
+    filename = get_brainweb1_seg(
+        Segmentation(contrast), force=force, brainweb_dir=brainweb_dir
+    )
+    data_ = nib.Nifti2Image.from_filename(filename)
+    data = np.asanyarray(data_.dataobj, dtype=np.uint16)
+    if contrast is Segmentation.FUZZY:
+        data = data.astype(np.float32) / 4095.0  # type: ignore
     return data
 
 
@@ -82,17 +79,19 @@ def _get_mri_sub20(
     tissue_map: os.PathLike = BrainWebTissueMap.v2.value,
     rng: int | np.random.Generator | None = None,
 ) -> np.ndarray:
-    if contrast == Contrast.T1:
+    if contrast is Contrast.T1:
         filename = get_brainweb20_T1(sub_id, brainweb_dir=brainweb_dir, force=force)
         data = nib.Nifti2Image.from_filename(filename).get_fdata()
     elif contrast in Segmentation:
-        filename = get_brainweb20(sub_id, segmentation=Segmentation(contrast))
+        filename = get_brainweb20(
+            sub_id, segmentation=Segmentation(contrast), force=force
+        )
         data_ = nib.Nifti2Image.from_filename(filename).dataobj
         data = np.asanyarray(data_, dtype=np.uint16)
-        if Segmentation(contrast) == Segmentation.FUZZY:
+        if contrast is Segmentation.FUZZY:
             data = data.astype(np.float32) / 4095
     else:
-        filename = get_brainweb20(sub_id, segmentation=Segmentation.FUZZY)
+        filename = get_brainweb20(sub_id, segmentation=Segmentation.FUZZY, force=force)
         tissue_map = tissue_map or BrainWebTissueMap.v2.value
         data = _apply_contrast(filename, tissue_map, Contrast(contrast), rng)
 
@@ -140,6 +139,14 @@ def get_mri(
     np.ndarray
         MRI data.
     """
+    try:
+        contrast = Contrast(contrast)
+    except ValueError:
+        try:
+            contrast = Segmentation(contrast)
+        except ValueError as e:
+            raise ValueError(f"Unknown contrast {contrast}") from e
+
     if sub_id == 0:
         data = _get_mri_sub0(
             contrast,
@@ -191,7 +198,7 @@ def get_mri(
 def _apply_contrast(
     file_fuzzy: os.PathLike,
     tissue_map: os.PathLike,
-    contrast: str,
+    contrast: Contrast,
     rng: int | np.random.Generator | None,
 ) -> np.ndarray:
     """Apply contrast to the data.
