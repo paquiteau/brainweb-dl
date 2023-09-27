@@ -394,8 +394,8 @@ def get_brainweb1_seg(
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     try:
         segmentation = Segmentation(segmentation)
-    except ValueError:
-        raise ValueError("segmentation  must be 'crisp' or 'fuzzy'")
+    except ValueError as e:
+        raise ValueError("segmentation  must be 'crisp' or 'fuzzy'") from e
 
     if segmentation is Segmentation.CRISP:
         download_command = "phantom_1.0mm_normal_crisp"
