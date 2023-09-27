@@ -183,7 +183,7 @@ def get_mri(
         else:
             zoom = np.array(shape) / np.array(data.shape[:3])
 
-        if Segmentation(contrast) == Segmentation.FUZZY:
+        if contrast is Segmentation.FUZZY:
             # Don't rescale the tissue dimension.
             zoom = (*zoom, 1.0)
         # rescale the data
