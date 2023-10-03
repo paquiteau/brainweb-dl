@@ -70,7 +70,7 @@ def main() -> None:
             ns.subject, ns.contrast, brainweb_dir=brainweb_dir, extension=ns.format
         )
         filename = Path(f"brainweb_{ns.subject}_{ns.contrast}.{ns.format}")
-        nib.Nifti2Image(array, np.eye(4)).to_filename(filename)
+        nib.Nifti1Image(array, np.eye(4)).to_filename(filename)
     elif ns.contrast in ["crisp", "fuzzy"]:
         if ns.subject == 0:
             filename = get_brainweb1_seg(ns.contrast, brainweb_dir=brainweb_dir)

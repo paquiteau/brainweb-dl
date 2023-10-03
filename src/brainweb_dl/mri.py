@@ -47,7 +47,7 @@ def _get_mri_sub0(
             force=force,
         )
 
-        return nib.Nifti2Image.from_filename(filename).get_fdata()
+        return nib.Nifti1Image.from_filename(filename).get_fdata()
 
     if contrast is Contrast.T2S:
         logger.warning(
@@ -64,7 +64,7 @@ def _get_mri_sub0(
     filename = get_brainweb1_seg(
         Segmentation(contrast), force=force, brainweb_dir=brainweb_dir
     )
-    data_ = nib.Nifti2Image.from_filename(filename)
+    data_ = nib.Nifti1Image.from_filename(filename)
     data = np.asanyarray(data_.dataobj, dtype=np.uint16)
     if contrast is Segmentation.FUZZY:
         data = data.astype(np.float32) / 4095.0  # type: ignore
@@ -81,12 +81,12 @@ def _get_mri_sub20(
 ) -> np.ndarray:
     if contrast is Contrast.T1:
         filename = get_brainweb20_T1(sub_id, brainweb_dir=brainweb_dir, force=force)
-        data = nib.Nifti2Image.from_filename(filename).get_fdata()
+        data = nib.Nifti1Image.from_filename(filename).get_fdata()
     elif contrast in Segmentation:
         filename = get_brainweb20(
             sub_id, segmentation=Segmentation(contrast), force=force
         )
-        data_ = nib.Nifti2Image.from_filename(filename).dataobj
+        data_ = nib.Nifti1Image.from_filename(filename).dataobj
         data = np.asanyarray(data_, dtype=np.uint16)
         if contrast is Segmentation.FUZZY:
             data = data.astype(np.float32) / 4095
@@ -220,7 +220,7 @@ def _apply_contrast(
     rng = np.random.default_rng(rng)
 
     tissues = _load_tissue_map(tissue_map)
-    data = nib.Nifti2Image.from_filename(file_fuzzy).get_fdata(dtype=np.float32)
+    data = nib.Nifti1Image.from_filename(file_fuzzy).get_fdata(dtype=np.float32)
     data /= 4095  # Data was encode in 12 bits
     ret_data = np.zeros(data.shape[:-1], dtype=np.float32)
     contrast_mean = []

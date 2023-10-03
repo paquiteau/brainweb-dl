@@ -433,7 +433,7 @@ def get_brainweb1_seg(
             shape=STD_RES,
         )
     # Create the 4D volume.
-    nib.save(nib.Nifti2Image(abs(data), affine=np.eye(4)), path)
+    nib.save(nib.Nifti1Image(abs(data), affine=np.eye(4)), path)
     return path
 
 
@@ -528,7 +528,7 @@ def save_array(data: np.ndarray, path: os.PathLike) -> os.PathLike:
     if path_.suffix == ".npy":
         np.save(path_, data)
     else:
-        nib.save(nib.Nifti2Image(data, np.eye(4)), path_)
+        nib.save(nib.Nifti1Image(data, np.eye(4)), path_)
     return path
 
 
