@@ -101,6 +101,7 @@ def _get_mri_sub20(
 def get_mri(
     sub_id: int,
     contrast: Contrast | Segmentation = Contrast.T1,
+    bbox: tuple[int, int, int, int, int, int] | None = None,
     shape: tuple[int, int, int] | None = None,
     brainweb_dir: BrainWebDirType = None,
     res: int = 1,
@@ -119,6 +120,10 @@ def get_mri(
         Subject ID.
     contrast : {"T1", "T2", "T2*"}
         Contrast to use.
+    bbox : tuple[int, int, int, int, int, int], optional
+        Bounding box of the data, specified as [xmin, xmax, ymin, ymax, zmin, zmax]
+        The data is cropped to the bounding box.
+
     shape : tuple[int, int, int], optional
         Shape of the MRI data. If None, the original shape is used.
     rng : int | np.random.Generator, optional
@@ -167,8 +172,11 @@ def get_mri(
             tissue_map=tissue_map or BrainWebTissueMap.v2.value,
         )
 
-    zoom: tuple[float, ...]
+    if bbox is not None:
+        data = _crop_data(data, bbox)
+
     if shape is not None and shape != data.shape and SCIPY_AVAILABLE:
+        zoom: tuple[float, ...]
         if isinstance(shape, float):
             zoom = shape
             zoom = (zoom,) * 3
@@ -193,6 +201,25 @@ def get_mri(
         return data_rescaled
     else:
         return data
+
+
+def _crop_data(
+    data: np.ndarray, bbox: tuple[float, float, float, float, float, float]
+) -> np.ndarray:
+    """Crop the 3D data to the bounding box bbox."""
+    slicer = [slice(None)] * len(data.shape)
+    print(bbox)
+    if len(data.shape) == 4:
+        # add a fourth dimension for the segmentation.
+        bbox = list(bbox) + [None, None]
+    print(data.shape)
+    for i, s in enumerate(data.shape):
+        slicer[i] = slice(
+            int(bbox[2 * i] * s) if bbox[2 * i] else 0,
+            int(bbox[2 * i + 1] * s) if bbox[2 * i + 1] else s,
+        )
+    print(slicer)
+    return data[tuple(slicer)]
 
 
 def _apply_contrast(
