@@ -1,21 +1,23 @@
 """Collection of function to create realistic MRI data from brainweb segmentations."""
 from __future__ import annotations
+
 import logging
 import os
 from typing import Literal
 
 import nibabel as nib
 import numpy as np
+
 from ._brainweb import (
+    BrainWebDirType,
+    BrainWebTissueMap,
+    Contrast,
+    Segmentation,
     _load_tissue_map,
     get_brainweb1,
     get_brainweb1_seg,
     get_brainweb20,
     get_brainweb20_T1,
-    Contrast,
-    Segmentation,
-    BrainWebTissueMap,
-    BrainWebDirType,
 )
 
 logger = logging.getLogger("brainweb_dl")
@@ -208,17 +210,14 @@ def _crop_data(
 ) -> np.ndarray:
     """Crop the 3D data to the bounding box bbox."""
     slicer = [slice(None)] * len(data.shape)
-    print(bbox)
     if len(data.shape) == 4:
         # add a fourth dimension for the segmentation.
         bbox = list(bbox) + [None, None]
-    print(data.shape)
     for i, s in enumerate(data.shape):
         slicer[i] = slice(
             int(bbox[2 * i] * s) if bbox[2 * i] else 0,
             int(bbox[2 * i + 1] * s) if bbox[2 * i + 1] else s,
         )
-    print(slicer)
     return data[tuple(slicer)]
 
 
