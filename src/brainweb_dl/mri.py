@@ -103,7 +103,7 @@ def _get_mri_sub20(
 def get_mri(
     sub_id: int,
     contrast: Contrast | Segmentation = Contrast.T1,
-    bbox: tuple[int, int, int, int, int, int] | None = None,
+    bbox: tuple[float | None, ...] | None = None,
     shape: tuple[int, int, int] | None = None,
     brainweb_dir: BrainWebDirType = None,
     res: int = 1,
@@ -183,7 +183,7 @@ def get_mri(
             zoom = shape
             zoom = (zoom,) * 3
         elif -1 in shape:
-            if np.prod(data.shape) <= 0:
+            if np.prod(shape) <= 0:
                 raise ValueError(
                     "The zoom factor must have two implicit dimension (-1)"
                     "in its defintion (ex. `(-1,-1, 64)` )."
@@ -205,18 +205,16 @@ def get_mri(
         return data
 
 
-def _crop_data(
-    data: np.ndarray, bbox: tuple[float, float, float, float, float, float]
-) -> np.ndarray:
+def _crop_data(data: np.ndarray, bbox: tuple[float | None, ...]) -> np.ndarray:
     """Crop the 3D data to the bounding box bbox."""
     slicer = [slice(None)] * len(data.shape)
     if len(data.shape) == 4:
         # add a fourth dimension for the segmentation.
-        bbox = list(bbox) + [None, None]
+        bbox = (*bbox, None, None)
     for i, s in enumerate(data.shape):
         slicer[i] = slice(
-            int(bbox[2 * i] * s) if bbox[2 * i] else 0,
-            int(bbox[2 * i + 1] * s) if bbox[2 * i + 1] else s,
+            int(bbox[2 * i] * s) if bbox[2 * i] is not None else 0,  # type: ignore
+            int(bbox[2 * i + 1] * s) if bbox[2 * i + 1] is not None else s,  # type: ignore
         )
     return data[tuple(slicer)]
 
