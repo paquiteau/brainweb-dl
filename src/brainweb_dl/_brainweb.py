@@ -38,7 +38,7 @@ import requests
 from numpy.typing import DTypeLike
 from tqdm.auto import tqdm
 
-logger = logging.getLogger("brainweb")
+logger = logging.getLogger("brainweb_dl")
 
 
 class ContainsEnumMeta(EnumMeta):
@@ -103,9 +103,11 @@ ALLOWED_RES = (1, 3, 5, 7, 9)
 
 BASE_URL = "http://brainweb.bic.mni.mcgill.ca/cgi/brainweb1/"
 
-BIG_RES = (362, 434, 362)
-STD_RES = (181, 217, 181)
-T1_20_RES = (181, 256, 256)
+BIG_RES_SHAPE = (362, 434, 362)
+BIG_RES_MM = (0.5, 0.5, 0.5)
+STD_RES_SHAPE = (181, 217, 181)
+STD_RES_MM = (1.0, 1.0, 1.0)
+T1_20_RES_SHAPE = (181, 256, 256)
 
 
 def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
@@ -237,7 +239,7 @@ def get_brainweb20(
     if segmentation is Segmentation.CRISP:
         download_command = f"subject{s:02d}_{segmentation}"
         data = _request_get_brainweb(
-            download_command, path, shape=BIG_RES, dtype=np.uint16
+            download_command, path, shape=BIG_RES_SHAPE, dtype=np.uint16
         )
         data = data >> 4
         data = data.astype(np.uint8)
@@ -249,9 +251,10 @@ def get_brainweb20(
     # We download all the fuzzy segmentation and create a 4D volume.
     # The 4th dimension is the segmentation type.
     if path.exists() and not force:
+        logger.debug("Found existing path for raw_data (brainweb 20){path}")
         return path
     tissue_map = _load_tissue_map(BrainWebTissueMap.v2.value)
-    data = np.zeros((*BIG_RES, len(tissue_map)), dtype=np.uint16)
+    data = np.zeros((*BIG_RES_SHAPE, len(tissue_map)), dtype=np.uint16)
 
     # For faster download, let's use joblib.
     def _download_fuzzy(i: int, tissue: str, data: np.ndarray) -> None:
@@ -260,7 +263,7 @@ def get_brainweb20(
             name,
             brainweb_dir / f"{name}",  # placeholder value
             dtype=np.uint16,
-            shape=BIG_RES,
+            shape=BIG_RES_SHAPE,
         )
 
     Parallel(n_jobs=-1, backend="threading")(
@@ -309,7 +312,7 @@ def get_brainweb20_T1(
             download_command,
             brainweb_dir / fname,
             force,
-            shape=T1_20_RES,
+            shape=T1_20_RES_SHAPE,
             dtype=np.uint16,
         )
         return save_array(data, path)
@@ -357,7 +360,7 @@ def get_brainweb1(
     https://brainweb.bic.mni.mcgill.ca/brainweb/selection_normal.html
     """
     brainweb_dir = get_brainweb_dir(brainweb_dir)
-    shape = STD_RES
+    shape = STD_RES_SHAPE
     try:
         contrast = Contrast(contrast)
     except ValueError as e:
@@ -374,9 +377,10 @@ def get_brainweb1(
         # download of contrasted images
     download_command = f"{contrast}+ICBM+normal+{res}mm+pn{noise}+rf{field_value}"
     fname = f"{contrast}_ICBM_normal_{res}mm_pn{noise}_rf{field_value}.{extension}"
-    shape = (int(np.rint(STD_RES[0] / res)), *STD_RES[1:])
+    shape = (int(np.rint(STD_RES_SHAPE[0] / res)), *STD_RES_SHAPE[1:])
     path = brainweb_dir / fname
     if path.exists() and not force:
+        logger.debug("Found existing path for raw_data (brainweb 20 T1){path}")
         return path
     data = _request_get_brainweb(
         download_command, brainweb_dir / fname, force, shape=shape, dtype=np.uint16
@@ -407,7 +411,7 @@ def get_brainweb1_seg(
             download_command,
             brainweb_dir / fname,
             force,
-            shape=STD_RES,
+            shape=STD_RES_SHAPE,
             dtype=np.uint16,
         )
         return save_array(data, path)
@@ -417,7 +421,7 @@ def get_brainweb1_seg(
     if path.exists() and not force:
         return path
     tissue_map = _load_tissue_map(BrainWebTissueMap.v1.value)
-    data = np.zeros((*STD_RES, len(tissue_map)), dtype=np.uint16)
+    data = np.zeros((*STD_RES_SHAPE, len(tissue_map)), dtype=np.uint16)
     for i, row in tqdm(
         enumerate(tissue_map),
         desc="Downloading tissues",
@@ -430,7 +434,7 @@ def get_brainweb1_seg(
             name,
             path=brainweb_dir / f"{name}.{extension}",  # placeholder
             dtype=np.uint16,
-            shape=STD_RES,
+            shape=STD_RES_SHAPE,
         )
     # Create the 4D volume.
     nib.save(nib.Nifti1Image(abs(data), affine=np.eye(4)), path)
@@ -442,7 +446,7 @@ def _request_get_brainweb(
     path: os.PathLike,
     force: bool = False,
     dtype: DTypeLike = np.float32,
-    shape: tuple = STD_RES,
+    shape: tuple = STD_RES_SHAPE,
 ) -> np.ndarray:
     """Request to download brainweb dataset.
 

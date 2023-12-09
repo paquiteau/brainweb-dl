@@ -18,6 +18,8 @@ from ._brainweb import (
     get_brainweb1_seg,
     get_brainweb20,
     get_brainweb20_T1,
+    BIG_RES_MM,
+    STD_RES_MM,
 )
 
 logger = logging.getLogger("brainweb_dl")
@@ -106,7 +108,8 @@ def get_mri(
     bbox: tuple[float | None, ...] | None = None,
     shape: tuple[int, int, int] | None = None,
     brainweb_dir: BrainWebDirType = None,
-    res: int = 1,
+    output_res: float | tuple[float, float, float] | None = None,
+    download_res: int = 1,
     noise: int = 0,
     field_value: int = 0,
     force: bool = False,
@@ -122,17 +125,17 @@ def get_mri(
         Subject ID.
     contrast : {"T1", "T2", "T2*"}
         Contrast to use.
-    bbox : tuple[int, int, int, int, int, int], optional
+    bbox : tuple[float, float, float, float, float, float], optional
         Bounding box of the data, specified as [xmin, xmax, ymin, ymax, zmin, zmax]
+        with values in [0, 1].
         The data is cropped to the bounding box.
-
-    shape : tuple[int, int, int], optional
-        Shape of the MRI data. If None, the original shape is used.
+    output_res: float | tuple[float, float, float] optional, default None
+        Resolution of the output data, the data will be rescale to the given resolution.
     rng : int | np.random.Generator, optional
         Random number generator.
     dir : str, optional
         Brainweb download directory.
-    res : int, optional
+    download_res : int, optional
         Resolution of the data, only use for subject 0.
     noise : int, optional
         Noise level of the data., only use for subject 0.
@@ -153,12 +156,12 @@ def get_mri(
             contrast = Segmentation(contrast)
         except ValueError as e:
             raise ValueError(f"Unknown contrast {contrast}") from e
-
+    logger.debug(f"Get MRI data for subject {sub_id} and contrast {contrast}")
     if sub_id == 0:
         data = _get_mri_sub0(
             contrast,
             brainweb_dir=brainweb_dir,
-            res=res,
+            res=download_res,
             noise=noise,
             field_value=field_value,
             force=force,
@@ -175,10 +178,11 @@ def get_mri(
         )
 
     if bbox is not None:
+        logger.debug(f"Apply bounding box {bbox} to the data")
         data = _crop_data(data, bbox)
 
-    if shape is not None and shape != data.shape and SCIPY_AVAILABLE:
-        zoom: tuple[float, ...]
+    zoom: tuple[float, ...] = None
+    if shape is not None and output_res is None:  # rescale the data with shape
         if isinstance(shape, float):
             zoom = shape
             zoom = (zoom,) * 3
@@ -193,15 +197,27 @@ def get_mri(
         else:
             zoom = np.array(shape) / np.array(data.shape[:3])
 
+    elif output_res is not None and shape is None:  # rescale the data with res
+        if isinstance(output_res, float):
+            res = (output_res,) * 3
+        base_res = BIG_RES_MM  #
+        if sub_id == 0 or sub_id != 0 and contrast == contrast.T1:
+            base_res = STD_RES_MM
+        zoom = np.array(base_res) / np.array(output_res)
+
+    if zoom is not None:
+        logger.debug(f"Rescale the data with zoom {zoom}")
         if contrast is Segmentation.FUZZY:
             # Don't rescale the tissue dimension.
             zoom = (*zoom, 1.0)
-        # rescale the data
+
         data_rescaled = sp.ndimage.zoom(data, zoom=zoom)
         # clip the data to the original range.
         data_rescaled = np.clip(data_rescaled, data.min(), data.max())
+        logger.debug(f"Data shape after rescaling: {data_rescaled.shape}")
         return data_rescaled
     else:
+        logger.debug(f"Return data with shape {data.shape}")
         return data
 
 
