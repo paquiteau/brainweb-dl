@@ -199,7 +199,7 @@ def get_mri(
 
     elif output_res is not None and shape is None:  # rescale the data with res
         if isinstance(output_res, float):
-            res = (output_res,) * 3
+            output_res = (output_res,) * 3
         base_res = BIG_RES_MM  #
         if sub_id == 0 or sub_id != 0 and contrast == contrast.T1:
             base_res = STD_RES_MM
