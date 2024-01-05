@@ -181,7 +181,7 @@ def get_mri(
         logger.debug(f"Apply bounding box {bbox} to the data")
         data = _crop_data(data, bbox)
 
-    zoom: tuple[float, ...] = None
+    zoom: tuple[float, ...]
     if shape is not None and output_res is None:  # rescale the data with shape
         if isinstance(shape, float):
             zoom = shape
@@ -201,7 +201,7 @@ def get_mri(
         if isinstance(output_res, float):
             output_res = (output_res,) * 3
         base_res = BIG_RES_MM  #
-        if sub_id == 0 or sub_id != 0 and contrast == contrast.T1:
+        if sub_id == 0 or sub_id != 0 and contrast == Contrast.T1:
             base_res = STD_RES_MM
         zoom = np.array(base_res) / np.array(output_res)
 
