@@ -19,7 +19,7 @@ def test_get_mri1(sub_id, contrast, res, noise, field_value, bw_dir):
         sub_id,
         contrast,
         brainweb_dir=bw_dir,
-        res=res,
+        download_res=res,
         noise=noise,
         field_value=field_value,
     )
@@ -28,7 +28,7 @@ def test_get_mri1(sub_id, contrast, res, noise, field_value, bw_dir):
 
 
 @pytest.mark.parametrize(
-    "kwargs", [{"res": None}, {"noise": None}, {"field_value": None}]
+    "kwargs", [{"download_res": None}, {"noise": None}, {"field_value": None}]
 )
 def test_get_mri1_unavailable(kwargs, bw_dir):
     """Test retrieval of unavailable data."""

@@ -181,7 +181,7 @@ def get_mri(
         logger.debug(f"Apply bounding box {bbox} to the data")
         data = _crop_data(data, bbox)
 
-    zoom: tuple[float, ...]
+    zoom: tuple[float, ...] | None = None
     if shape is not None and output_res is None:  # rescale the data with shape
         if isinstance(shape, float):
             zoom = shape
