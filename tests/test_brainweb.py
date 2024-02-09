@@ -1,4 +1,5 @@
 """Test for the brainweb module."""
+
 import numpy as np
 
 import pytest
