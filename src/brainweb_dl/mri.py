@@ -1,4 +1,5 @@
 """Collection of function to create realistic MRI data from brainweb segmentations."""
+
 from __future__ import annotations
 
 import logging
@@ -38,7 +39,7 @@ def _get_mri_sub0(
     noise: int = 0,
     field_value: int = 0,
     force: bool = False,
-    tissue_map: os.PathLike = BrainWebTissueMap.v1.value,
+    tissue_map: os.PathLike = BrainWebTissueMap.v1,
     rng: int | np.random.Generator | None = None,
 ) -> np.ndarray:
     if contrast in [Contrast.T1, Contrast.T2, Contrast.PD]:
@@ -80,7 +81,7 @@ def _get_mri_sub20(
     sub_id: int,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-    tissue_map: os.PathLike = BrainWebTissueMap.v2.value,
+    tissue_map: os.PathLike = BrainWebTissueMap.v2,
     rng: int | np.random.Generator | None = None,
 ) -> np.ndarray:
     if contrast is Contrast.T1:
@@ -96,7 +97,7 @@ def _get_mri_sub20(
             data = data.astype(np.float32) / 4095
     else:
         filename = get_brainweb20(sub_id, segmentation=Segmentation.FUZZY, force=force)
-        tissue_map = tissue_map or BrainWebTissueMap.v2.value
+        tissue_map = tissue_map or BrainWebTissueMap.v2
         data = _apply_contrast(filename, tissue_map, Contrast(contrast), rng)
 
     return data
@@ -165,7 +166,7 @@ def get_mri(
             noise=noise,
             field_value=field_value,
             force=force,
-            tissue_map=tissue_map or BrainWebTissueMap.v1.value,
+            tissue_map=tissue_map or BrainWebTissueMap.v1,
             rng=rng,
         )
     else:
@@ -174,7 +175,7 @@ def get_mri(
             sub_id,
             brainweb_dir=brainweb_dir,
             force=force,
-            tissue_map=tissue_map or BrainWebTissueMap.v2.value,
+            tissue_map=tissue_map or BrainWebTissueMap.v2,
         )
 
     if bbox is not None:
