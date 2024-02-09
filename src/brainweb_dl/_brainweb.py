@@ -15,6 +15,7 @@ References
 - Brainweb: https://brainweb.bic.mni.mcgill.ca/brainweb/
 - Original Python interface: https://github.com/casperdcl/brainweb/blob/master/brainweb/utils.py
 """
+
 from __future__ import annotations
 import csv
 import logging
@@ -84,9 +85,9 @@ class BrainWebVersion(Enum):
     v2 = 20
 
 
-class BrainWebTissueMap(Enum):
-    v1 = Path(str(files("brainweb_dl.data") / "brainweb1_tissues.csv"))
-    v2 = Path(str(files("brainweb_dl.data") / "brainweb20_tissues.csv"))
+class BrainWebTissueMap:
+    v1: Path = files("brainweb_dl.data") / "brainweb1_tissues.csv"  # type: ignore
+    v2: Path = files("brainweb_dl.data") / "brainweb20_tissues.csv"  # type: ignore
 
 
 BrainWebDirType = Union[Path, None]
@@ -146,8 +147,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> list[os.PathLike]:
-    ...
+) -> list[os.PathLike]: ...
 
 
 @overload
@@ -156,8 +156,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> os.PathLike:
-    ...
+) -> os.PathLike: ...
 
 
 def get_brainweb20_multiple(
@@ -253,7 +252,7 @@ def get_brainweb20(
     if path.exists() and not force:
         logger.debug("Found existing path for raw_data (brainweb 20){path}")
         return path
-    tissue_map = _load_tissue_map(BrainWebTissueMap.v2.value)
+    tissue_map = _load_tissue_map(BrainWebTissueMap.v2)
     data = np.zeros((*BIG_RES_SHAPE, len(tissue_map)), dtype=np.uint16)
 
     # For faster download, let's use joblib.
@@ -420,7 +419,7 @@ def get_brainweb1_seg(
     path = brainweb_dir / fname
     if path.exists() and not force:
         return path
-    tissue_map = _load_tissue_map(BrainWebTissueMap.v1.value)
+    tissue_map = _load_tissue_map(BrainWebTissueMap.v1)
     data = np.zeros((*STD_RES_SHAPE, len(tissue_map)), dtype=np.uint16)
     for i, row in tqdm(
         enumerate(tissue_map),
@@ -523,7 +522,7 @@ def _request_get_brainweb(
 
 
 def _load_tissue_map(tissue_map: os.PathLike) -> list[dict]:
-    with open(tissue_map, "r+") as csvfile:
+    with open(tissue_map) as csvfile:
         return list(csv.DictReader(csvfile))
 
 
