@@ -77,7 +77,7 @@ where=["src"]
 write_to = "src/brainweb_dl/_version.py"
 version_scheme = "python-simplified-semver"
 local_scheme="no-local-version"
-
+fallback_version="v99-dev"
 
 # Formatting using black.
 [tool.black]
