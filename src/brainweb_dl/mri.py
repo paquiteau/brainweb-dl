@@ -206,6 +206,9 @@ def get_mri(
             base_res = STD_RES_MM
         zoom = np.array(base_res) / np.array(output_res)
 
+    elif output_res is not None and shape is not None:
+        raise ValueError("output_res and shape cannot be set at the same time")
+
     if zoom is not None:
         logger.debug(f"Rescale the data with zoom {zoom}")
         if contrast is Segmentation.FUZZY:

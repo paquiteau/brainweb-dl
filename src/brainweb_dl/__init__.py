@@ -8,7 +8,14 @@ from ._brainweb import (
     get_brainweb20,
     get_brainweb20_multiple,
 )
-from ._brainweb import STD_RES_SHAPE, BIG_RES_SHAPE
+from ._brainweb import (
+    STD_RES_SHAPE,
+    BIG_RES_SHAPE,
+    Segmentation,
+    Contrast,
+    BrainWebTissuesV1,
+    BrainWebTissuesV2,
+)
 
 __all__ = [
     "get_mri",
@@ -18,6 +25,10 @@ __all__ = [
     "get_brainweb20_multiple",
     "STD_RES_SHAPE",
     "BIG_RES_SHAPE",
+    "Segmentation",
+    "Contrast",
+    "BrainWebTissuesV1",
+    "BrainWebTissuesV2",
 ]
 
 

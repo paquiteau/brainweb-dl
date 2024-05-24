@@ -17,6 +17,7 @@ References
 """
 
 from __future__ import annotations
+
 import csv
 import logging
 import os
@@ -28,14 +29,14 @@ else:
     from importlib_resources import files
 import gzip
 import io
-from pathlib import Path
-from typing import Literal, overload, Union
 from enum import Enum, EnumMeta
+from pathlib import Path
+from typing import Literal, Union, overload
 
-from joblib import Parallel, delayed
 import nibabel as nib
 import numpy as np
 import requests
+from joblib import Parallel, delayed
 from numpy.typing import DTypeLike
 from tqdm.auto import tqdm
 
@@ -43,6 +44,8 @@ logger = logging.getLogger("brainweb_dl")
 
 
 class ContainsEnumMeta(EnumMeta):
+    """Metaclass for case insensitive Enum."""
+
     def __contains__(cls, item):  # noqa
         try:
             cls(item)
@@ -58,6 +61,8 @@ class ContainsEnumMeta(EnumMeta):
 
 
 class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
+    """Enum with case insensitive comparison."""
+
     @classmethod
     def _missing_(cls, value):  # noqa
         value = value.upper()
@@ -69,6 +74,8 @@ class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
 
 
 class Contrast(MyEnum):
+    """Contrast type."""
+
     T1 = "T1"
     T2 = "T2"
     T2S = "T2s"
@@ -76,18 +83,56 @@ class Contrast(MyEnum):
 
 
 class Segmentation(MyEnum):
+    """Segmentation type."""
+
     CRISP = "crisp"
     FUZZY = "fuzzy"
 
 
 class BrainWebVersion(Enum):
+    """Brainweb dataset versions."""
+
     v1 = 1
     v2 = 20
 
 
 class BrainWebTissueMap:
+    """Tissue map files for the brainweb dataset."""
+
     v1: Path = files("brainweb_dl.data") / "brainweb1_tissues.csv"  # type: ignore
     v2: Path = files("brainweb_dl.data") / "brainweb20_tissues.csv"  # type: ignore
+
+
+class BrainWebTissuesV2(int, Enum):
+    """Labels for the tissues in the segmentation of the BrainWeb20 dataset."""
+
+    BACKGROUND = VOID = BCK = 0
+    CSF = 1
+    GREY_MATTER = GM = GRY = 2
+    WHITE_MATTER = WM = WHT = 3
+    FAT = 4
+    MUSCLE = MUS = 5
+    MUSCLE_SKIN = M_S = 6
+    SKULL = SKL = 7
+    VESSELS = VES = 8
+    AROUND_FAT = FAT2 = 9
+    DURA = 10
+    BONE_MARROW = MRW = 11
+
+
+class BrainWebTissuesV1(int, Enum):
+    """Labels for the tissues in the segmentation of the BrainWeb dataset."""
+
+    BACKGROUND = VOID = BCK = 0
+    CSF = 1
+    GREY_MATTER = GM = GRY = 2
+    WHITE_MATTER = WM = WHT = 3
+    FAT = 4
+    MUSCLE_SKIN = M_S = 5
+    SKIN = SKN = 6
+    SKULL = SKL = 7
+    GLIAL_MATTER = GLI = 8
+    MEAT = MIT = 9
 
 
 BrainWebDirType = Union[Path, None]
