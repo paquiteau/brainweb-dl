@@ -111,13 +111,13 @@ class BrainWebTissuesV2(int, Enum):
     GREY_MATTER = GM = GRY = 2
     WHITE_MATTER = WM = WHT = 3
     FAT = 4
-    MUSCLE = MUS = 5
-    MUSCLE_SKIN = M_S = 6
+    MUSCLES = MUS = 5
+    MUSCLES_SKIN = M_S = 6
     SKULL = SKL = 7
     VESSELS = VES = 8
     AROUND_FAT = FAT2 = 9
     DURA = 10
-    BONE_MARROW = MRW = 11
+    BONE_MARROW = MARROW = MRW = 11
 
 
 class BrainWebTissuesV1(int, Enum):
