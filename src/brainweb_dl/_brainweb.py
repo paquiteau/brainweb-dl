@@ -199,20 +199,20 @@ def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
 
 @overload
 def get_brainweb20_multiple(
-    subject: Literal["all"] | list[int | str],
-    brainweb_dir: BrainWebDirType = None,
-    force: bool = False,
-    segmentation: Segmentation = Segmentation.CRISP,
-) -> list[os.PathLike]: ...
-
-
-@overload
-def get_brainweb20_multiple(
     subject: int | str,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
 ) -> os.PathLike: ...
+
+
+@overload
+def get_brainweb20_multiple(
+    subject: list[int | str],
+    brainweb_dir: BrainWebDirType = None,
+    force: bool = False,
+    segmentation: Segmentation = Segmentation.CRISP,
+) -> list[os.PathLike]: ...
 
 
 def get_brainweb20_multiple(
@@ -239,18 +239,24 @@ def get_brainweb20_multiple(
         list of downloaded files.
     """
     if subject == "all":
-        subject = SUB_ID
+        _subject = SUB_ID
     elif isinstance(subject, (str, int)):
-        subject = [_sub_id(subject)]
+        _subject = [_sub_id(subject)]
     elif not isinstance(subject, list):
-        subject = [_sub_id(s) for s in subject]
-        raise ValueError("subject must be int, list or 'all'")
-    if len(subject) > 1:
-        f = []
-        for s in tqdm(subject, desc="Downloading brainweb20"):
-            f.append(get_brainweb20(s, brainweb_dir, force, segmentation))
+        _subject = [_sub_id(s) for s in subject]
+    else:
+        raise ValueError(
+            "subject must be int, a  str, a list of int or string or 'all'"
+        )
+    if len(_subject) > 1:
+        f: list[os.PathLike] = []
+        pbar = tqdm(total=len(_subject), desc="Downloading Brainweb phantoms")
+        for s in _subject:
+            f.append(get_brainweb20(_sub_id(s), brainweb_dir, force, segmentation))
+            pbar.update(1)
+        pbar.close()
         return f
-    return get_brainweb20(subject[0], brainweb_dir, force, segmentation)
+    return get_brainweb20(_subject[0], brainweb_dir, force, segmentation)
 
 
 def get_brainweb20(
