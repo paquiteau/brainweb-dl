@@ -78,7 +78,7 @@ def _get_mri_sub0(
 
 def _get_mri_sub20(
     contrast: Contrast | Segmentation,
-    sub_id: int,
+    sub_id: int | str,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     tissue_map: os.PathLike = BrainWebTissueMap.v2,
@@ -158,7 +158,7 @@ def get_mri(
         except ValueError as e:
             raise ValueError(f"Unknown contrast {contrast}") from e
     logger.debug(f"Get MRI data for subject {sub_id} and contrast {contrast}")
-    if sub_id == 0:
+    if sub_id == 0 or sub_id == "0":
         data = _get_mri_sub0(
             contrast,
             brainweb_dir=brainweb_dir,

@@ -156,6 +156,17 @@ STD_RES_MM = (1.0, 1.0, 1.0)
 T1_20_RES_SHAPE = (181, 256, 256)
 
 
+def _sub_id(s: int | str) -> int:
+    if isinstance(s, str):
+        s = SUB_ID[int(s) - 1]
+    if s not in SUB_ID:
+        raise ValueError(
+            f"subject id {s} not in brainweb20 dataset. choose an id in {SUB_ID}"
+            " or use a string (e.g. '1' to get the first id (=4))"
+        )
+    return s
+
+
 def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
     """Get the Brainweb directory.
 
@@ -229,10 +240,10 @@ def get_brainweb20_multiple(
     """
     if subject == "all":
         subject = SUB_ID
-    elif isinstance(subject, int):
-        subject = [SUB_ID[subject]]
+    elif isinstance(subject, (str, int)):
+        subject = [_sub_id(subject)]
     elif not isinstance(subject, list):
-        subject = [SUB_ID[s] for s in subject]
+        subject = [_sub_id(s) for s in subject]
         raise ValueError("subject must be int, list or 'all'")
     if len(subject) > 1:
         f = []
@@ -269,8 +280,7 @@ def get_brainweb20(
     os.PathLike
         Path to downloaded file.
     """
-    if s not in SUB_ID:
-        raise ValueError(f"subject id {s} not in brainweb20 dataset.")
+    s = _sub_id(s)
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     path = brainweb_dir / f"brainweb_s{s:02d}_{segmentation}.{extension}"
     if path.exists() and not force:
@@ -318,7 +328,7 @@ def get_brainweb20(
 
 
 def get_brainweb20_T1(
-    s: int,
+    s: int | str,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
@@ -348,6 +358,7 @@ def get_brainweb20_T1(
     """
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     # download of contrasted images
+    s = _sub_id(s)
     download_command = f"subject{s:02d}_t1w"
     fname = f"subject{s:02d}_t1w.{extension}"
     path = brainweb_dir / fname
