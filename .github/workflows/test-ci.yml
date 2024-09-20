@@ -26,7 +26,7 @@ jobs:
         run: black . --diff --color --check
       - name: ruff Check
         shell: bash
-        run: ruff src
+        run: ruff check src
       - name: mypy Check
         shell: bash
         run: mypy src --non-interactive --ignore-missing-imports --install-types
