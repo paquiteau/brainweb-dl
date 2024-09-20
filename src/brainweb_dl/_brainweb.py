@@ -242,7 +242,7 @@ def get_brainweb20_multiple(
         _subject = SUB_ID
     elif isinstance(subject, (str, int)):
         _subject = [_sub_id(subject)]
-    elif not isinstance(subject, list):
+    elif isinstance(subject, list):
         _subject = [_sub_id(s) for s in subject]
     else:
         raise ValueError(
