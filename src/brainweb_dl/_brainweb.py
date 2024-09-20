@@ -199,7 +199,7 @@ def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
 
 @overload
 def get_brainweb20_multiple(
-    subject: Literal["all"] | list[int],
+    subject: Literal["all"] | list[int | str],
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
@@ -208,7 +208,7 @@ def get_brainweb20_multiple(
 
 @overload
 def get_brainweb20_multiple(
-    subject: int,
+    subject: int | str,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
@@ -216,7 +216,7 @@ def get_brainweb20_multiple(
 
 
 def get_brainweb20_multiple(
-    subject: int | Literal["all"] | list[int],
+    subject: int | str | Literal["all"] | list[int | str],
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
@@ -254,7 +254,7 @@ def get_brainweb20_multiple(
 
 
 def get_brainweb20(
-    s: int,
+    s: int | str,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
