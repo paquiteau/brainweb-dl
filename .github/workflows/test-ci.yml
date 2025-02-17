@@ -20,13 +20,13 @@ jobs:
           python-version: "3.10"
       - name: Black setup
         shell: bash
-        run: pip install black ruff mypy
-      - name: Black Check
-        shell: bash
-        run: black . --diff --color --check
+        run: pip install  uff
       - name: ruff Check
         shell: bash
         run: ruff check src
+      - name: ruf format
+        shell: bash
+        run: ruff format --check
       - name: mypy Check
         shell: bash
         run: mypy src --non-interactive --ignore-missing-imports --install-types

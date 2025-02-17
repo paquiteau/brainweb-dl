@@ -96,20 +96,18 @@ addopts = [
 # linting using ruff.
 [tool.ruff]
 src = ["src", "tests"]
+[tool.ruff.lint]
 select = ["E", "F", "B", "Q", "D", "UP", "ANN"]
 
 ignore = [
-    "ANN101", # missing type annotation for self
-    "ANN102", # missing type annotation for cls in classmethod.
     "ANN204", # missing return type for __init__
     "D105", # missing docstring in magic method
     "D404", # Imperative mode is not necessary everywhere, trust me.
 ]
-
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["ANN"]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
 [mypy]
