@@ -20,11 +20,11 @@ jobs:
           python-version: "3.10"
       - name: Black setup
         shell: bash
-        run: pip install  uff
+        run: pip install ruff
       - name: ruff Check
         shell: bash
         run: ruff check src
-      - name: ruf format
+      - name: ruff format
         shell: bash
         run: ruff format --check
       - name: mypy Check
