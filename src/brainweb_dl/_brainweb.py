@@ -18,15 +18,10 @@ References
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from _typeshed import AnyPath
-
 import csv
-import re
 import logging
 import os
+import re
 import sys
 
 if sys.version_info > (3, 9):
@@ -47,6 +42,8 @@ from numpy.typing import DTypeLike, NDArray
 from tqdm.auto import tqdm
 
 logger = logging.getLogger("brainweb_dl")
+
+GenericPath = os.PathLike[str] | str
 
 
 class ContainsEnumMeta(EnumMeta):
@@ -70,7 +67,7 @@ class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
     """Enum with case insensitive comparison."""
 
     @classmethod
-    def _missing_(cls, value: Any) -> None | MyEnum:
+    def _missing_(cls, value) -> None | MyEnum:  # noqa
         if isinstance(value, str):
             value = value.upper()
             value = value.replace("*", "s")
@@ -179,12 +176,12 @@ def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
 
     Parameters
     ----------
-    brainweb_dir : AnyPath
+    brainweb_dir : GenericPath
        brainweb_directory to download the data.
 
     Returns
     -------
-    AnyPath
+    GenericPath
         Path to brainweb_dir
 
     Notes
@@ -210,7 +207,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> AnyPath: ...
+) -> GenericPath: ...
 
 
 @overload
@@ -219,7 +216,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> list[AnyPath]: ...
+) -> list[GenericPath]: ...
 
 
 def get_brainweb20_multiple(
@@ -227,7 +224,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> list[AnyPath] | os.PathLike:
+) -> list[GenericPath] | GenericPath:
     """Download sample or all brainweb subjects.
 
     Parameters
@@ -235,14 +232,14 @@ def get_brainweb20_multiple(
     subject : int | list | Literal["all"]
         subject id or list of subject id to download.
         If "all", download all subjects.
-    brainweb_dir : AnyPath
+    brainweb_dir : GenericPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
 
     Returns
     -------
-    list[AnyPath]
+    list[GenericPath]
         list of downloaded files.
     """
     if subject == "all":
@@ -256,7 +253,7 @@ def get_brainweb20_multiple(
             "subject must be int, a  str, a list of int or string or 'all'"
         )
     if len(_subject) > 1:
-        f: list[AnyPath] = []
+        f: list[GenericPath] = []
         pbar = tqdm(total=len(_subject), desc="Downloading Brainweb phantoms")
         for s in _subject:
             f.append(get_brainweb20(_sub_id(s), brainweb_dir, force, segmentation))
@@ -272,14 +269,14 @@ def get_brainweb20(
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> AnyPath:
+) -> GenericPath:
     """Download one subject of brainweb dataset.
 
     Parameters
     ----------
     s : int
         subject id.
-    brainweb_dir : AnyPath
+    brainweb_dir : GenericPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
@@ -290,7 +287,7 @@ def get_brainweb20(
 
     Returns
     -------
-    AnyPath
+    GenericPath
         Path to downloaded file.
     """
     s = _sub_id(s)
@@ -346,14 +343,14 @@ def get_brainweb20_T1(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> AnyPath:
+) -> GenericPath:
     """Download the Brainweb20 T1 Phantom.
 
     Parameters
     ----------
     s : int
         subject id.
-    brainweb_dir : AnyPath
+    brainweb_dir : GenericPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
@@ -362,7 +359,7 @@ def get_brainweb20_T1(
 
     Returns
     -------
-    AnyPath
+    GenericPath
         Path to downloaded file.
 
     Notes
@@ -397,7 +394,7 @@ def get_brainweb1(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> AnyPath:
+) -> GenericPath:
     """Download the Brainweb1 phantom as a nifti file.
 
     Parameters
@@ -411,7 +408,7 @@ def get_brainweb1(
         {0, 1, 3, 5, 7, 9}
     field_value : int
         RF field value in the phantom. Must be in {0, 20, 40}
-    brainweb_dir : AnyPath
+    brainweb_dir : GenericPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
@@ -420,7 +417,7 @@ def get_brainweb1(
 
     Returns
     -------
-    AnyPath
+    GenericPath
         Path to downloaded file.
 
     Notes
@@ -462,7 +459,7 @@ def get_brainweb1_seg(
     extension: Literal["nii.gz", "nii"] = "nii.gz",
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-) -> AnyPath:
+) -> GenericPath:
     """Download the Brainweb1 phantom segmentation as a nifti file."""
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     try:
@@ -562,7 +559,7 @@ def _request_get_brainweb_affine(download_cmd: str) -> NDArray:
 
 def _request_get_brainweb(
     download_command: str,
-    path: AnyPath,
+    path: GenericPath,
     force: bool = False,
     dtype: DTypeLike = np.float32,
     shape: tuple = STD_RES_SHAPE,
@@ -573,7 +570,7 @@ def _request_get_brainweb(
     ----------
     do_download_alias : str
         Formatted request code to download a volume from brainweb.
-    path : AnyPath
+    path : GenericPath
         Path to save the downloaded file.
     force : bool
         Force download even if the file already exists.
@@ -586,7 +583,7 @@ def _request_get_brainweb(
 
     Returns
     -------
-    AnyPath
+    GenericPath
         Path to downloaded file.
 
     Raises
@@ -653,12 +650,12 @@ def _request_get_brainweb(
     return (data, affine)
 
 
-def _load_tissue_map(tissue_map: AnyPath) -> list[dict]:
+def _load_tissue_map(tissue_map: GenericPath) -> list[dict]:
     with open(tissue_map) as csvfile:
         return list(csv.DictReader(csvfile))
 
 
-def save_array(data: NDArray, affine: NDArray | None, path: AnyPath) -> os.PathLike:
+def save_array(data: NDArray, affine: NDArray | None, path: GenericPath) -> GenericPath:
     path_ = Path(path)
     if path_.suffix == ".npy":
         np.save(path_, data)
@@ -669,7 +666,7 @@ def save_array(data: NDArray, affine: NDArray | None, path: AnyPath) -> os.PathL
     return path
 
 
-def load_array(path: AnyPath, dtype: DTypeLike = None) -> tuple[NDArray, NDArray]:
+def load_array(path: GenericPath, dtype: DTypeLike = None) -> tuple[NDArray, NDArray]:
     path_ = Path(path)
     if path_.suffix == ".npy":
         data = np.load(path_)

@@ -25,6 +25,7 @@ from ._brainweb import (
 )
 
 logger = logging.getLogger("brainweb_dl")
+GenericPath = os.PathLike[str] | str
 
 
 def _get_mri_sub0(
@@ -34,7 +35,7 @@ def _get_mri_sub0(
     noise: int = 0,
     field_value: int = 0,
     force: bool = False,
-    tissue_map: os.PathLike = BrainWebTissueMap.v1,
+    tissue_map: GenericPath = BrainWebTissueMap.v1,
     rng: int | np.random.Generator | None = None,
 ) -> np.ndarray:
     if contrast in [Contrast.T1, Contrast.T2, Contrast.PD]:
@@ -76,27 +77,27 @@ def _get_mri_sub20(
     sub_id: int | str,
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-    tissue_map: os.PathLike = BrainWebTissueMap.v2,
+    tissue_map: GenericPath = BrainWebTissueMap.v2,
     rng: int | np.random.Generator | None = None,
 ) -> tuple[NDArray, NDArray]:
     if contrast is Contrast.T1:
         filename = get_brainweb20_T1(sub_id, brainweb_dir=brainweb_dir, force=force)
         nft = nifti.Nifti1Image.from_filename(filename)
-        data, affine = nft.get_fdata(), nft.affine
+        data, affine = np.asarray(nft.get_fdata()), np.asarray(nft.affine)
     elif contrast in Segmentation:
         filename = get_brainweb20(
             sub_id, segmentation=Segmentation(contrast), force=force
         )
         nft = nifti.Nifti1Image.from_filename(filename)
         data = np.asanyarray(nft.dataobj, dtype=np.uint16)
-        affine = nft.affine
+        affine = np.asarray(nft.affine)
         if contrast is Segmentation.FUZZY:
             data = data.astype(np.float32) / 4095
     else:
         filename = get_brainweb20(sub_id, segmentation=Segmentation.FUZZY, force=force)
         tissue_map = tissue_map or BrainWebTissueMap.v2
         data = _apply_contrast(filename, tissue_map, Contrast(contrast), rng)
-        affine = nifti.Nifti1Image.from_filename(filename).affine
+        affine = np.asarray(nifti.Nifti1Image.from_filename(filename).affine)
     return (data, affine)
 
 
@@ -112,7 +113,7 @@ def get_mri(
     field_value: int = 0,
     force: bool = False,
     with_affine: bool = False,
-    tissue_map: os.PathLike | None = None,
+    tissue_map: GenericPath | None = None,
     rng: int | np.random.Generator | None = None,
 ) -> tuple[NDArray, NDArray] | NDArray:
     """Get MRI data from a brainweb fuzzy segmentation.
@@ -246,8 +247,8 @@ def _crop_data(data: np.ndarray, bbox: tuple[float | None, ...]) -> np.ndarray:
 
 
 def _apply_contrast(
-    file_fuzzy: os.PathLike,
-    tissue_map: os.PathLike,
+    file_fuzzy: GenericPath,
+    tissue_map: GenericPath,
     contrast: Contrast,
     rng: int | np.random.Generator | None,
 ) -> np.ndarray:
