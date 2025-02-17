@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Literal
 
-import nibabel as nib
 import numpy as np
+import scipy as sp
+from nibabel import nifti1 as nifti
+from numpy.typing import NDArray
 
 from ._brainweb import (
+    BIG_RES_MM,
+    STD_RES_MM,
     BrainWebDirType,
     BrainWebTissueMap,
     Contrast,
@@ -19,17 +22,9 @@ from ._brainweb import (
     get_brainweb1_seg,
     get_brainweb20,
     get_brainweb20_T1,
-    BIG_RES_MM,
-    STD_RES_MM,
 )
 
 logger = logging.getLogger("brainweb_dl")
-
-SCIPY_AVAILABLE = True
-try:
-    import scipy as sp  # type: ignore
-except ImportError:
-    SCIPY_AVAILABLE = False
 
 
 def _get_mri_sub0(
@@ -52,7 +47,7 @@ def _get_mri_sub0(
             force=force,
         )
 
-        return nib.Nifti1Image.from_filename(filename).get_fdata()
+        return nifti.Nifti1Image.from_filename(filename).get_fdata()
 
     if contrast is Contrast.T2S:
         logger.warning(
@@ -69,7 +64,7 @@ def _get_mri_sub0(
     filename = get_brainweb1_seg(
         Segmentation(contrast), force=force, brainweb_dir=brainweb_dir
     )
-    data_ = nib.Nifti1Image.from_filename(filename)
+    data_ = nifti.Nifti1Image.from_filename(filename)
     data = np.asanyarray(data_.dataobj, dtype=np.uint16)
     if contrast is Segmentation.FUZZY:
         data = data.astype(np.float32) / 4095.0  # type: ignore
@@ -83,24 +78,26 @@ def _get_mri_sub20(
     force: bool = False,
     tissue_map: os.PathLike = BrainWebTissueMap.v2,
     rng: int | np.random.Generator | None = None,
-) -> np.ndarray:
+) -> tuple[NDArray, NDArray]:
     if contrast is Contrast.T1:
         filename = get_brainweb20_T1(sub_id, brainweb_dir=brainweb_dir, force=force)
-        data = nib.Nifti1Image.from_filename(filename).get_fdata()
+        nft = nifti.Nifti1Image.from_filename(filename)
+        data, affine = nft.get_fdata(), nft.affine
     elif contrast in Segmentation:
         filename = get_brainweb20(
             sub_id, segmentation=Segmentation(contrast), force=force
         )
-        data_ = nib.Nifti1Image.from_filename(filename).dataobj
-        data = np.asanyarray(data_, dtype=np.uint16)
+        nft = nifti.Nifti1Image.from_filename(filename)
+        data = np.asanyarray(nft.dataobj, dtype=np.uint16)
+        affine = nft.affine
         if contrast is Segmentation.FUZZY:
             data = data.astype(np.float32) / 4095
     else:
         filename = get_brainweb20(sub_id, segmentation=Segmentation.FUZZY, force=force)
         tissue_map = tissue_map or BrainWebTissueMap.v2
         data = _apply_contrast(filename, tissue_map, Contrast(contrast), rng)
-
-    return data
+        affine = nifti.Nifti1Image.from_filename(filename).affine
+    return (data, affine)
 
 
 def get_mri(
@@ -114,10 +111,10 @@ def get_mri(
     noise: int = 0,
     field_value: int = 0,
     force: bool = False,
-    extension: Literal[".nii", ".nii.gz", ".npy", None] = ".nii.gz",
+    with_affine: bool = False,
     tissue_map: os.PathLike | None = None,
     rng: int | np.random.Generator | None = None,
-) -> np.ndarray:
+) -> tuple[NDArray, NDArray] | NDArray:
     """Get MRI data from a brainweb fuzzy segmentation.
 
     Parameters
@@ -142,6 +139,9 @@ def get_mri(
         Noise level of the data., only use for subject 0.
     field_value : int, optional, only use for subject 0.
         Field value of the data.
+    with_affine : bool, optional
+        Return the affine matrix with the data.
+
     kwargs : dict, optional
         Additional arguments to pass to the brainweb functions.
 
@@ -159,7 +159,7 @@ def get_mri(
             raise ValueError(f"Unknown contrast {contrast}") from e
     logger.debug(f"Get MRI data for subject {sub_id} and contrast {contrast}")
     if sub_id == 0 or sub_id == "0":
-        data = _get_mri_sub0(
+        data, affine = _get_mri_sub0(
             contrast,
             brainweb_dir=brainweb_dir,
             res=download_res,
@@ -170,7 +170,7 @@ def get_mri(
             rng=rng,
         )
     else:
-        data = _get_mri_sub20(
+        data, affine = _get_mri_sub20(
             contrast,
             sub_id,
             brainweb_dir=brainweb_dir,
@@ -181,6 +181,7 @@ def get_mri(
     if bbox is not None:
         logger.debug(f"Apply bounding box {bbox} to the data")
         data = _crop_data(data, bbox)
+        # FIXME: changing the bbox updates the affine matrix !
 
     zoom: tuple[float, ...] | None = None
     if shape is not None and output_res is None:  # rescale the data with shape
@@ -196,15 +197,17 @@ def get_mri(
             ref_ax = [i for i, v in enumerate(shape) if v > 0][0]
             zoom = (shape[ref_ax] / data.shape[ref_ax],) * 3
         else:
-            zoom = np.array(shape) / np.array(data.shape[:3])
+            zoom = tuple(np.array(shape) / np.array(data.shape[:3]))
 
     elif output_res is not None and shape is None:  # rescale the data with res
         if isinstance(output_res, float):
-            output_res = (output_res,) * 3
+            output_res_ = (output_res,) * 3
+        else:
+            output_res_ = output_res
         base_res = BIG_RES_MM  #
         if sub_id == 0 or sub_id != 0 and contrast == Contrast.T1:
             base_res = STD_RES_MM
-        zoom = np.array(base_res) / np.array(output_res)
+        zoom = tuple(np.array(base_res) / np.array(output_res_))
 
     elif output_res is not None and shape is not None:
         raise ValueError("output_res and shape cannot be set at the same time")
@@ -219,10 +222,13 @@ def get_mri(
         # clip the data to the original range.
         data_rescaled = np.clip(data_rescaled, data.min(), data.max())
         logger.debug(f"Data shape after rescaling: {data_rescaled.shape}")
-        return data_rescaled
+        data = data_rescaled
+    # FIXME: zoom changes the affine matrix.
     else:
         logger.debug(f"Return data with shape {data.shape}")
-        return data
+    if with_affine:
+        return data, affine
+    return data
 
 
 def _crop_data(data: np.ndarray, bbox: tuple[float | None, ...]) -> np.ndarray:
@@ -264,7 +270,7 @@ def _apply_contrast(
     rng = np.random.default_rng(rng)
 
     tissues = _load_tissue_map(tissue_map)
-    data = nib.Nifti1Image.from_filename(file_fuzzy).get_fdata(dtype=np.float32)
+    data = nifti.Nifti1Image.from_filename(file_fuzzy).get_fdata(dtype=np.float32)
     data /= 4095  # Data was encode in 12 bits
     ret_data = np.zeros(data.shape[:-1], dtype=np.float32)
     contrast_mean = []

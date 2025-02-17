@@ -18,7 +18,13 @@ References
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from _typeshed import AnyPath
+
 import csv
+import re
 import logging
 import os
 import sys
@@ -33,11 +39,11 @@ from enum import Enum, EnumMeta
 from pathlib import Path
 from typing import Literal, Union, overload
 
-import nibabel as nib
 import numpy as np
 import requests
 from joblib import Parallel, delayed
-from numpy.typing import DTypeLike
+from nibabel import nifti1 as nifti
+from numpy.typing import DTypeLike, NDArray
 from tqdm.auto import tqdm
 
 logger = logging.getLogger("brainweb_dl")
@@ -64,12 +70,13 @@ class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
     """Enum with case insensitive comparison."""
 
     @classmethod
-    def _missing_(cls, value):  # noqa
-        value = value.upper()
-        value = value.replace("*", "s")
-        for member in cls:
-            if member.value.upper() == value.upper():
-                return member
+    def _missing_(cls, value: Any) -> None | MyEnum:
+        if isinstance(value, str):
+            value = value.upper()
+            value = value.replace("*", "s")
+            for member in cls:
+                if member.value.upper() == value.upper():
+                    return member
         return None
 
 
@@ -172,12 +179,12 @@ def get_brainweb_dir(brainweb_dir: BrainWebDirType = None) -> Path:
 
     Parameters
     ----------
-    brainweb_dir : os.PathLike
+    brainweb_dir : AnyPath
        brainweb_directory to download the data.
 
     Returns
     -------
-    os.PathLike
+    AnyPath
         Path to brainweb_dir
 
     Notes
@@ -203,7 +210,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> os.PathLike: ...
+) -> AnyPath: ...
 
 
 @overload
@@ -212,7 +219,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> list[os.PathLike]: ...
+) -> list[AnyPath]: ...
 
 
 def get_brainweb20_multiple(
@@ -220,7 +227,7 @@ def get_brainweb20_multiple(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
-) -> list[os.PathLike] | os.PathLike:
+) -> list[AnyPath] | os.PathLike:
     """Download sample or all brainweb subjects.
 
     Parameters
@@ -228,14 +235,14 @@ def get_brainweb20_multiple(
     subject : int | list | Literal["all"]
         subject id or list of subject id to download.
         If "all", download all subjects.
-    brainweb_dir : os.PathLike
+    brainweb_dir : AnyPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
 
     Returns
     -------
-    list[os.PathLike]
+    list[AnyPath]
         list of downloaded files.
     """
     if subject == "all":
@@ -249,7 +256,7 @@ def get_brainweb20_multiple(
             "subject must be int, a  str, a list of int or string or 'all'"
         )
     if len(_subject) > 1:
-        f: list[os.PathLike] = []
+        f: list[AnyPath] = []
         pbar = tqdm(total=len(_subject), desc="Downloading Brainweb phantoms")
         for s in _subject:
             f.append(get_brainweb20(_sub_id(s), brainweb_dir, force, segmentation))
@@ -265,14 +272,14 @@ def get_brainweb20(
     force: bool = False,
     segmentation: Segmentation = Segmentation.CRISP,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> os.PathLike:
+) -> AnyPath:
     """Download one subject of brainweb dataset.
 
     Parameters
     ----------
     s : int
         subject id.
-    brainweb_dir : os.PathLike
+    brainweb_dir : AnyPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
@@ -283,7 +290,7 @@ def get_brainweb20(
 
     Returns
     -------
-    os.PathLike
+    AnyPath
         Path to downloaded file.
     """
     s = _sub_id(s)
@@ -298,12 +305,12 @@ def get_brainweb20(
 
     if segmentation is Segmentation.CRISP:
         download_command = f"subject{s:02d}_{segmentation}"
-        data = _request_get_brainweb(
+        data, affine = _request_get_brainweb(
             download_command, path, shape=BIG_RES_SHAPE, dtype=np.uint16
         )
         data = data >> 4
         data = data.astype(np.uint8)
-        return save_array(data, path)
+        return save_array(data, affine, path)
     # Fuzzy Segmentation
     # Download all the fuzzy segmentation and create a 4D volume.
     path = Path(brainweb_dir) / f"brainweb_s{s:02d}_fuzzy.{extension}"
@@ -317,9 +324,9 @@ def get_brainweb20(
     data = np.zeros((*BIG_RES_SHAPE, len(tissue_map)), dtype=np.uint16)
 
     # For faster download, let's use joblib.
-    def _download_fuzzy(i: int, tissue: str, data: np.ndarray) -> None:
+    def _download_fuzzy(i: int, tissue: str, data: NDArray) -> None:
         name = f"subject{s:02d}_{tissue}"
-        data[..., i] = _request_get_brainweb(
+        data[..., i], _ = _request_get_brainweb(
             name,
             brainweb_dir / f"{name}",  # placeholder value
             dtype=np.uint16,
@@ -330,7 +337,8 @@ def get_brainweb20(
         delayed(_download_fuzzy)(i, tissue["ID"], data)
         for i, tissue in enumerate(tissue_map)
     )
-    return save_array(data, path)
+    affine = _request_get_brainweb_affine(f"subject{s:02d}_fuzzy")
+    return save_array(data, affine, path)
 
 
 def get_brainweb20_T1(
@@ -338,14 +346,14 @@ def get_brainweb20_T1(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> os.PathLike:
+) -> AnyPath:
     """Download the Brainweb20 T1 Phantom.
 
     Parameters
     ----------
     s : int
         subject id.
-    brainweb_dir : os.PathLike
+    brainweb_dir : AnyPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
@@ -354,7 +362,7 @@ def get_brainweb20_T1(
 
     Returns
     -------
-    os.PathLike
+    AnyPath
         Path to downloaded file.
 
     Notes
@@ -369,14 +377,14 @@ def get_brainweb20_T1(
     fname = f"subject{s:02d}_t1w.{extension}"
     path = brainweb_dir / fname
     if not path.exists() or force:
-        data = _request_get_brainweb(
+        data, affine = _request_get_brainweb(
             download_command,
             brainweb_dir / fname,
             force,
             shape=T1_20_RES_SHAPE,
             dtype=np.uint16,
         )
-        return save_array(data, path)
+        return save_array(data, affine, path)
     else:
         return path
 
@@ -389,7 +397,7 @@ def get_brainweb1(
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
     extension: Literal["nii.gz", "nii"] = "nii.gz",
-) -> os.PathLike:
+) -> AnyPath:
     """Download the Brainweb1 phantom as a nifti file.
 
     Parameters
@@ -403,7 +411,7 @@ def get_brainweb1(
         {0, 1, 3, 5, 7, 9}
     field_value : int
         RF field value in the phantom. Must be in {0, 20, 40}
-    brainweb_dir : os.PathLike
+    brainweb_dir : AnyPath
        brainweb_directory to download the data.
     force : bool
         force download even if the file already exists.
@@ -412,7 +420,7 @@ def get_brainweb1(
 
     Returns
     -------
-    os.PathLike
+    AnyPath
         Path to downloaded file.
 
     Notes
@@ -443,10 +451,10 @@ def get_brainweb1(
     if path.exists() and not force:
         logger.debug("Found existing path for raw_data (brainweb 20 T1){path}")
         return path
-    data = _request_get_brainweb(
+    data, affine = _request_get_brainweb(
         download_command, brainweb_dir / fname, force, shape=shape, dtype=np.uint16
     )
-    return save_array(data, path)
+    return save_array(data, affine, path)
 
 
 def get_brainweb1_seg(
@@ -454,7 +462,7 @@ def get_brainweb1_seg(
     extension: Literal["nii.gz", "nii"] = "nii.gz",
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-) -> os.PathLike:
+) -> AnyPath:
     """Download the Brainweb1 phantom segmentation as a nifti file."""
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     try:
@@ -468,14 +476,14 @@ def get_brainweb1_seg(
         path = brainweb_dir / fname
         if path.exists() and not force:
             return path
-        data = _request_get_brainweb(
+        data, affine = _request_get_brainweb(
             download_command,
             brainweb_dir / fname,
             force,
             shape=STD_RES_SHAPE,
             dtype=np.uint16,
         )
-        return save_array(data, path)
+        return save_array(data, affine, path)
 
     fname = f"phantom_1.0mm_normal_fuzzy.{extension}"
     path = brainweb_dir / fname
@@ -498,24 +506,74 @@ def get_brainweb1_seg(
             shape=STD_RES_SHAPE,
         )
     # Create the 4D volume.
-    nib.save(nib.Nifti1Image(abs(data), affine=np.eye(4)), path)
+    nifti.save(nifti.Nifti1Image(abs(data), affine=np.eye(4)), path)
     return path
+
+
+def _request_get_brainweb_affine(download_cmd: str) -> NDArray:
+    """Get the correct affine matrix for the downloaded image."""
+    matched = re.match(r"subject(\d{2})_(t1w|crisp|fuzzy)", download_cmd)
+
+    if matched:
+        type_ = matched.group(2)
+        if type_ == "t1w":
+            return np.array(
+                [
+                    [1, 0, 0, -127.75],
+                    [0, 1, 0, -145.75],
+                    [0, 0, 1, -72.25],
+                    [0, 0, 0, 1],
+                ],
+                dtype=np.float32,
+            )
+        elif type_ == "crisp" or type_ == "fuzzy":
+            return np.array(
+                [
+                    [0.5, 0, 0, -90.25],
+                    [0, 0.5, 0, -126.25],
+                    [0, 0, 0.5, -72.25],
+                    [0, 0, 0, 1],
+                ],
+                dtype=np.float32,
+            )
+        else:
+            raise ValueError("Unknown match", type_)
+
+    BRAINWEB_1_AFFINE = np.array(
+        [
+            [1, 0, 0, -90],
+            [0, 1, 0, -126],
+            [0, 0, 1, -72],
+            [0, 0, 0, 1],
+        ],
+    )
+    matched = re.match(r"(T1|T2|PD)\+ICBM\+normal", download_cmd)
+    if matched:
+        if matched.group(1):
+            return BRAINWEB_1_AFFINE
+    matched = re.match(r"phantom_1.0mm_normal_", download_cmd)
+    if matched:
+        return BRAINWEB_1_AFFINE
+
+    if download_cmd == "phantom_1.0mm_normal_crisp":
+        return BRAINWEB_1_AFFINE
+    return np.eye(4)
 
 
 def _request_get_brainweb(
     download_command: str,
-    path: os.PathLike,
+    path: AnyPath,
     force: bool = False,
     dtype: DTypeLike = np.float32,
     shape: tuple = STD_RES_SHAPE,
-) -> np.ndarray:
+) -> tuple[NDArray, NDArray]:
     """Request to download brainweb dataset.
 
     Parameters
     ----------
     do_download_alias : str
         Formatted request code to download a volume from brainweb.
-    path : os.PathLike
+    path : AnyPath
         Path to save the downloaded file.
     force : bool
         Force download even if the file already exists.
@@ -528,7 +586,7 @@ def _request_get_brainweb(
 
     Returns
     -------
-    os.PathLike
+    AnyPath
         Path to downloaded file.
 
     Raises
@@ -540,7 +598,8 @@ def _request_get_brainweb(
     # don't download if it cached.
     if path.exists() and not force:
         return load_array(path)
-    d = requests.get(
+
+    request_formatted = (
         BASE_URL
         + "?"
         + "&".join(
@@ -557,21 +616,28 @@ def _request_get_brainweb(
                 }.items()
                 if v
             ]
-        ),
+        )
+    )
+
+    d = requests.get(
+        request_formatted,
         stream=True,
         headers={"Accept-Encoding": "identity", "Content-Encoding": "gzip"},
     )
 
     # download
-    with io.BytesIO() as buffer, tqdm(
-        total=float(d.headers.get("Content-length", 0)),
-        desc=f"Downloading {download_command}",
-        unit="B",
-        unit_scale=True,
-        unit_divisor=1024,
-        leave=False,
-        position=2,
-    ) as pbar:
+    with (
+        io.BytesIO() as buffer,
+        tqdm(
+            total=float(d.headers.get("Content-length", 0)),
+            desc=f"Downloading {download_command}",
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            leave=False,
+            position=2,
+        ) as pbar,
+    ):
         for chunk in d.iter_content(chunk_size=1024):
             if chunk:
                 buffer.write(chunk)
@@ -580,30 +646,39 @@ def _request_get_brainweb(
     if data.size != np.prod(shape):
         raise ValueError(f"Mismatch between data size and shape {data.size} != {shape}")
     data = abs(data).reshape(shape)
-    return data
+
+    # TODO Find the correct affine matrix
+    affine = _request_get_brainweb_affine(download_command)
+
+    return (data, affine)
 
 
-def _load_tissue_map(tissue_map: os.PathLike) -> list[dict]:
+def _load_tissue_map(tissue_map: AnyPath) -> list[dict]:
     with open(tissue_map) as csvfile:
         return list(csv.DictReader(csvfile))
 
 
-def save_array(data: np.ndarray, path: os.PathLike) -> os.PathLike:
+def save_array(data: NDArray, affine: NDArray | None, path: AnyPath) -> os.PathLike:
     path_ = Path(path)
     if path_.suffix == ".npy":
         np.save(path_, data)
     else:
-        nib.save(nib.Nifti1Image(data, np.eye(4)), path_)
+        if affine is None:
+            affine = np.eye(4)
+        nifti.save(nifti.Nifti1Image(data, affine=affine), path)
     return path
 
 
-def load_array(path: os.PathLike, dtype: DTypeLike = None) -> np.ndarray:
+def load_array(path: AnyPath, dtype: DTypeLike = None) -> tuple[NDArray, NDArray]:
     path_ = Path(path)
     if path_.suffix == ".npy":
         data = np.load(path_)
+        affine = np.eye(4, dtype=np.float32)
     else:
-        data = np.asanyarray(nib.nifti1.load(path_).dataobj)
+        nft = nifti.load(path_)
+        data = np.asarray(nft.dataobj)
+        affine = np.asarray(nft.affine).astype(np.float32)
 
     if dtype is not None:
         data = data.astype(dtype)
-    return data
+    return data, affine
