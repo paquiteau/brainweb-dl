@@ -37,7 +37,7 @@ def _get_mri_sub0(
     force: bool = False,
     tissue_map: GenericPath = BrainWebTissueMap.v1,
     rng: int | np.random.Generator | None = None,
-) -> np.ndarray:
+) -> tuple[NDArray, NDArray]:
     if contrast in [Contrast.T1, Contrast.T2, Contrast.PD]:
         filename = get_brainweb1(
             Contrast(contrast),
@@ -48,7 +48,8 @@ def _get_mri_sub0(
             force=force,
         )
 
-        return nifti.Nifti1Image.from_filename(filename).get_fdata()
+        nft = nifti.Nifti1Image.from_filename(filename)
+        return nft.get_fdata(), nft.affine
 
     if contrast is Contrast.T2S:
         logger.warning(
@@ -65,11 +66,12 @@ def _get_mri_sub0(
     filename = get_brainweb1_seg(
         Segmentation(contrast), force=force, brainweb_dir=brainweb_dir
     )
-    data_ = nifti.Nifti1Image.from_filename(filename)
-    data = np.asanyarray(data_.dataobj, dtype=np.uint16)
+    nft = nifti.Nifti1Image.from_filename(filename)
+    data = np.asanyarray(nft.dataobj, dtype=np.uint16)
+    affine = np.asarray(nft.affine)
     if contrast is Segmentation.FUZZY:
         data = data.astype(np.float32) / 4095.0  # type: ignore
-    return data
+    return data, affine
 
 
 def _get_mri_sub20(
