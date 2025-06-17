@@ -66,6 +66,9 @@ class ContainsEnumMeta(EnumMeta):
 class MyEnum(str, Enum, metaclass=ContainsEnumMeta):
     """Enum with case insensitive comparison."""
 
+    def __str__(self) -> str:
+        return self.value
+
     @classmethod
     def _missing_(cls, value) -> None | MyEnum:  # noqa
         if isinstance(value, str):

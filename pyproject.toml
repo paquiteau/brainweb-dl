@@ -8,7 +8,7 @@ name = "brainweb-dl"
 description = "Download BrainWeb MRI data"
 readme = "README.md"
 
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 dynamic = ["version"]
 
 license = {file = "LICENSE"}
