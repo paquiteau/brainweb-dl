@@ -49,7 +49,8 @@ def _get_mri_sub0(
         )
 
         nft = nifti.Nifti1Image.from_filename(filename)
-        return nft.get_fdata(), nft.affine
+        affine = np.asarray(nft.affine)
+        return nft.get_fdata(), affine
 
     if contrast is Contrast.T2S:
         logger.warning(
@@ -60,8 +61,9 @@ def _get_mri_sub0(
             force=force,
             brainweb_dir=brainweb_dir,
         )
-
-        return _apply_contrast(filename, tissue_map, contrast, rng)
+        nft = nifti.Nifti1Image.from_filename(filename)
+        affine = np.asarray(nft.affine)
+        return _apply_contrast(filename, tissue_map, contrast, rng), affine
     # Segmenation data.
     filename = get_brainweb1_seg(
         Segmentation(contrast), force=force, brainweb_dir=brainweb_dir
@@ -186,7 +188,7 @@ def get_mri(
         data = _crop_data(data, bbox)
         # FIXME: changing the bbox updates the affine matrix !
 
-    zoom: tuple[float, ...] | None = None
+    zoom: tuple[float | NDArray, ...] | None = None
     if shape is not None and output_res is None:  # rescale the data with shape
         if isinstance(shape, float):
             zoom = shape
@@ -195,7 +197,7 @@ def get_mri(
             if np.prod(shape) <= 0:
                 raise ValueError(
                     "The zoom factor must have two implicit dimension (-1)"
-                    "in its defintion (ex. `(-1,-1, 64)` )."
+                    "in its definition (ex. `(-1,-1, 64)` )."
                 )
             ref_ax = [i for i, v in enumerate(shape) if v > 0][0]
             zoom = (shape[ref_ax] / data.shape[ref_ax],) * 3
@@ -270,7 +272,7 @@ def _apply_contrast(
     np.ndarray
         MRI data with the applied contrast.
     """
-    rng = np.random.default_rng(rng)
+    rng_ = np.random.default_rng(rng)
 
     tissues = _load_tissue_map(tissue_map)
     data = nifti.Nifti1Image.from_filename(file_fuzzy).get_fdata(dtype=np.float32)
@@ -288,7 +290,7 @@ def _apply_contrast(
 
     for tlabel in range(1, len(tissues)):
         mask = data[..., tlabel] > 0
-        ret_data[mask] += data[mask, tlabel] * rng.normal(
+        ret_data[mask] += data[mask, tlabel] * rng_.normal(
             contrast_mean[tlabel], contrast_std[tlabel] / 5, np.sum(mask, dtype=int)
         )
     return ret_data

@@ -43,7 +43,7 @@ from tqdm.auto import tqdm
 
 logger = logging.getLogger("brainweb_dl")
 
-GenericPath = os.PathLike[str] | str
+GenericPath = os.PathLike | str
 
 
 class ContainsEnumMeta(EnumMeta):
@@ -462,7 +462,7 @@ def get_brainweb1_seg(
     extension: Literal["nii.gz", "nii"] = "nii.gz",
     brainweb_dir: BrainWebDirType = None,
     force: bool = False,
-) -> GenericPath:
+) -> os.PathLike:
     """Download the Brainweb1 phantom segmentation as a nifti file."""
     brainweb_dir = get_brainweb_dir(brainweb_dir)
     try:
@@ -658,7 +658,7 @@ def _load_tissue_map(tissue_map: GenericPath) -> list[dict]:
         return list(csv.DictReader(csvfile))
 
 
-def save_array(data: NDArray, affine: NDArray | None, path: GenericPath) -> GenericPath:
+def save_array(data: NDArray, affine: NDArray | None, path: os.PathLike) -> os.PathLike:
     path_ = Path(path)
     if path_.suffix == ".npy":
         np.save(path_, data)
