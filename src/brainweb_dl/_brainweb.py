@@ -24,10 +24,7 @@ import os
 import re
 import sys
 
-if sys.version_info > (3, 9):
-    from importlib.resources import files
-else:
-    from importlib_resources import files
+from importlib.resources import files
 import gzip
 import io
 from enum import Enum, EnumMeta
