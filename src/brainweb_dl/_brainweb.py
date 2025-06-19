@@ -487,6 +487,7 @@ def get_brainweb1_seg(
         return path
     tissue_map = _load_tissue_map(BrainWebTissueMap.v1)
     data = np.zeros((*STD_RES_SHAPE, len(tissue_map)), dtype=np.uint16)
+    affine = _request_get_brainweb_affine("phantom_1.0mm_normal_fuzzy")
     for i, row in tqdm(
         enumerate(tissue_map),
         desc="Downloading tissues",
@@ -495,14 +496,14 @@ def get_brainweb1_seg(
         leave=False,
     ):
         name = f"phantom_1.0mm_normal_{row['ID']}"
-        data[..., i] = _request_get_brainweb(
+        data[..., i], _ = _request_get_brainweb(
             name,
             path=brainweb_dir / f"{name}.{extension}",  # placeholder
             dtype=np.uint16,
             shape=STD_RES_SHAPE,
         )
     # Create the 4D volume.
-    nifti.save(nifti.Nifti1Image(abs(data), affine=np.eye(4)), path)
+    nifti.save(nifti.Nifti1Image(abs(data), affine=affine), path)
     return path
 
 
