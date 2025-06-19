@@ -22,7 +22,6 @@ import csv
 import logging
 import os
 import re
-import sys
 
 from importlib.resources import files
 import gzip

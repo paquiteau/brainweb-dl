@@ -67,9 +67,7 @@ def main() -> None:
     filename: os.PathLike
     brainweb_dir = get_brainweb_dir(ns.brainweb_dir)
     if ns.contrast in ["T1", "T2", "T2*"]:
-        array = get_mri(
-            ns.subject, ns.contrast, brainweb_dir=brainweb_dir
-        )
+        array = get_mri(ns.subject, ns.contrast, brainweb_dir=brainweb_dir)
         filename = Path(f"brainweb_{ns.subject}_{ns.contrast}.{ns.format}")
         nib.Nifti1Image(array, np.eye(4)).to_filename(filename)
     elif ns.contrast in ["crisp", "fuzzy"]:
